@@ -51,6 +51,25 @@ const emptyItem = {
   status: 'available',
 };
 
+function formatSlotLabel(dateValue, startValue, endValue) {
+  const date = new Date(`${dateValue}T${startValue}`);
+  const day = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+  const start = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+  const end = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(`${dateValue}T${endValue}`));
+
+  return `${day}, ${start} - ${end}`;
+}
+
 function makePickupCode() {
   return `TS-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -68,7 +87,7 @@ function TailorSt() {
   const [adminCredentials, setAdminCredentials] = useState({ email: '', password: '' });
   const [newItem, setNewItem] = useState(emptyItem);
   const [photoFile, setPhotoFile] = useState(null);
-  const [newSlot, setNewSlot] = useState({ label: '', capacity: 1 });
+  const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -89,7 +108,7 @@ function TailorSt() {
       setIsLoading(true);
       const [uniformResult, slotResult] = await Promise.all([
         supabase.from('uniforms').select('*').eq('status', 'available').order('created_at', { ascending: false }),
-        supabase.from('pickup_slots').select('*').eq('is_active', true).order('created_at', { ascending: false }),
+        supabase.from('pickup_slots').select('*').eq('is_active', true).order('starts_at', { ascending: true }),
       ]);
 
       if (!uniformResult.error && uniformResult.data) setUniforms(uniformResult.data);
@@ -100,7 +119,30 @@ function TailorSt() {
       setIsLoading(false);
     }
 
+    async function restoreAdminSession() {
+      const sessionResult = await supabase.auth.getSession();
+      if (!sessionResult.data.session) return;
+
+      setAdminUnlocked(true);
+      const [uniformResult, slotResult, bookingResult] = await Promise.all([
+        supabase.from('uniforms').select('*').order('created_at', { ascending: false }),
+        supabase.from('pickup_slots').select('*').order('starts_at', { ascending: true }),
+        supabase.from('bookings').select('*, uniforms(title, size), pickup_slots(label)').order('created_at', { ascending: false }),
+      ]);
+
+      if (!uniformResult.error && uniformResult.data) setUniforms(uniformResult.data);
+      if (!slotResult.error && slotResult.data) setSlots(slotResult.data);
+      if (!bookingResult.error && bookingResult.data) setBookings(bookingResult.data);
+    }
+
     loadLiveData();
+    restoreAdminSession();
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminUnlocked(Boolean(session));
+    });
+
+    return () => data.subscription.unsubscribe();
   }, []);
 
   async function reserveItem(event) {
@@ -162,7 +204,7 @@ function TailorSt() {
 
     const [uniformResult, slotResult, bookingResult] = await Promise.all([
       supabase.from('uniforms').select('*').order('created_at', { ascending: false }),
-      supabase.from('pickup_slots').select('*').order('created_at', { ascending: false }),
+      supabase.from('pickup_slots').select('*').order('starts_at', { ascending: true }),
       supabase.from('bookings').select('*, uniforms(title, size), pickup_slots(label)').order('created_at', { ascending: false }),
     ]);
 
@@ -240,13 +282,17 @@ function TailorSt() {
 
   async function addSlot(event) {
     event.preventDefault();
+    if (!newSlot.date || !newSlot.startTime || !newSlot.endTime) return;
+
+    const startsAt = new Date(`${newSlot.date}T${newSlot.startTime}`).toISOString();
     const slot = {
-      label: newSlot.label.trim(),
+      label: formatSlotLabel(newSlot.date, newSlot.startTime, newSlot.endTime),
+      starts_at: startsAt,
       capacity: Number(newSlot.capacity),
       booked_count: 0,
       is_active: true,
     };
-    if (!slot.label || slot.capacity < 1) return;
+    if (slot.capacity < 1) return;
 
     setIsLoading(true);
     if (hasSupabaseConfig) {
@@ -260,9 +306,18 @@ function TailorSt() {
     } else {
       setSlots((entries) => [{ ...slot, id: `slot-${Date.now()}` }, ...entries]);
     }
-    setNewSlot({ label: '', capacity: 1 });
+    setNewSlot({ date: '', startTime: '', endTime: '', capacity: 1 });
     setStatusMessage('Pickup slot added.');
     setIsLoading(false);
+  }
+
+  async function signOutAdmin() {
+    if (hasSupabaseConfig) {
+      await supabase.auth.signOut();
+    }
+    setAdminUnlocked(false);
+    setBookings([]);
+    setStatusMessage('');
   }
 
   async function completeBooking(booking) {
@@ -370,6 +425,7 @@ function TailorSt() {
           setNewItem={setNewItem}
           setNewSlot={setNewSlot}
           setPhotoFile={setPhotoFile}
+          signOutAdmin={signOutAdmin}
           slots={slots}
           uniforms={uniforms}
           unlockAdmin={unlockAdmin}
@@ -430,6 +486,7 @@ function AdminView({
   setNewItem,
   setNewSlot,
   setPhotoFile,
+  signOutAdmin,
   slots,
   uniforms,
   unlockAdmin,
@@ -474,7 +531,10 @@ function AdminView({
             <p className="eyebrow">Orders</p>
             <h2>Reservations</h2>
           </div>
-          <strong>{bookings.filter((booking) => booking.status === 'reserved').length} open</strong>
+          <div className="panel-actions">
+            <strong>{bookings.filter((booking) => booking.status === 'reserved').length} open</strong>
+            <button className="text-button" onClick={signOutAdmin} type="button">Sign out</button>
+          </div>
         </div>
         <div className="table-list">
           {bookings.map((booking) => (
@@ -553,10 +613,20 @@ function AdminView({
       <form className="admin-panel" onSubmit={addSlot}>
         <p className="eyebrow">Pickup</p>
         <h2>Add time slot</h2>
-        <label>
-          Time label
-          <input value={newSlot.label} onChange={(event) => setNewSlot({ ...newSlot, label: event.target.value })} placeholder="Tuesday, 3:30 PM - 4:00 PM" />
-        </label>
+        <div className="slot-time-grid">
+          <label>
+            Date
+            <input required type="date" value={newSlot.date} onChange={(event) => setNewSlot({ ...newSlot, date: event.target.value })} />
+          </label>
+          <label>
+            Start
+            <input required type="time" value={newSlot.startTime} onChange={(event) => setNewSlot({ ...newSlot, startTime: event.target.value })} />
+          </label>
+          <label>
+            End
+            <input required type="time" value={newSlot.endTime} onChange={(event) => setNewSlot({ ...newSlot, endTime: event.target.value })} />
+          </label>
+        </div>
         <label>
           Capacity
           <input min="1" type="number" value={newSlot.capacity} onChange={(event) => setNewSlot({ ...newSlot, capacity: event.target.value })} />

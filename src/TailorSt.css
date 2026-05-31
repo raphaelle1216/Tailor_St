@@ -423,10 +423,30 @@ button:disabled {
   margin-bottom: 16px;
 }
 
-.panel-heading strong {
+.panel-heading strong,
+.text-button {
   background: var(--gold);
   border-radius: 999px;
   padding: 8px 12px;
+}
+
+.panel-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.admin-panel .text-button {
+  background: var(--mint);
+  color: var(--ink);
+  font-weight: 800;
+  min-height: auto;
+}
+
+.slot-time-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1.2fr 1fr 1fr;
 }
 
 .table-list,
@@ -468,6 +488,7 @@ button:disabled {
   }
 
   .topbar,
+  .panel-actions,
   .confirmation,
   .order-row {
     align-items: stretch;
@@ -477,6 +498,7 @@ button:disabled {
   .hero-section,
   .inventory-grid,
   .admin-grid,
+  .slot-time-grid,
   .reservation-modal {
     grid-template-columns: 1fr;
   }
