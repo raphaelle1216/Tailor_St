@@ -1,3 +1,5 @@
+
+deployement refresh 
 # Tailor St
 
 Tailor St is a no-payment school uniform exchange app. Students can browse available donated uniforms, reserve an item anonymously, and choose an available pickup slot. Admins can add inventory, publish pickup slots, see reservations, and check off completed pickups.
