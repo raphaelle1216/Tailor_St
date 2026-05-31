@@ -1,37 +1,36 @@
-# Getting Started with Create React App
+# Tailor St
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Tailor St is a no-payment school uniform exchange app. Students can browse available donated uniforms, reserve an item anonymously, and choose an available pickup slot. Admins can add inventory, publish pickup slots, see reservations, and check off completed pickups.
 
-## Available Scripts
+## Setup
 
-In the project directory, you can run:
+1. Copy `.env.example` to `.env.local`.
+2. Add your Supabase project URL and public anon key.
+3. Run the SQL in `supabase-schema.sql` inside Supabase SQL Editor.
+4. In Supabase Authentication, create an admin user with email and password.
+5. Keep `REACT_APP_ADMIN_PASSCODE` only for local demo mode when Supabase is not connected.
+
+## Scripts
 
 ### `npm start`
 
-Runs the app in the development mode.\
+Runs the app locally.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Builds the app for production to the `build` folder.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Deploy Notes
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+For Vercel, use:
 
-### `npm run eject`
+- Framework preset: Create React App
+- Build command: `npm run build`
+- Output directory: `build`
+- Environment variables from `.env.example`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The app includes demo data when Supabase environment variables are not set. For production, connect Supabase, create an admin Auth user, and use row-level security policies from `supabase-schema.sql`.
 
 If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 

@@ -1,0 +1,496 @@
+:root {
+  --ink: #17211b;
+  --muted: #65736b;
+  --paper: #fffdf8;
+  --line: #dce4dc;
+  --sage: #d8eadb;
+  --mint: #edf8ef;
+  --blue: #355c7d;
+  --coral: #c85c45;
+  --gold: #f4c95d;
+  --shadow: 0 18px 60px rgba(23, 33, 27, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input[type='file'] {
+  align-items: center;
+  display: flex;
+  padding: 8px;
+}
+
+.file-pill {
+  background: var(--mint);
+  border: 1px solid #d5e6d8;
+  border-radius: 999px;
+  color: #2e5b38;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 7px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.topbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto 20px;
+  max-width: 1180px;
+}
+
+.brand-button {
+  align-items: center;
+  background: transparent;
+  color: var(--ink);
+  display: flex;
+  gap: 12px;
+  padding: 0;
+  text-align: left;
+}
+
+.brand-mark {
+  align-items: center;
+  background: var(--ink);
+  border-radius: 8px;
+  color: white;
+  display: grid;
+  font-weight: 800;
+  height: 46px;
+  letter-spacing: 0;
+  place-items: center;
+  width: 46px;
+}
+
+.brand-button strong,
+.brand-button small {
+  display: block;
+}
+
+.brand-button small {
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.nav-actions {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  padding: 4px;
+}
+
+.nav-actions button {
+  background: transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 10px 14px;
+}
+
+.nav-actions button.active {
+  background: var(--ink);
+  color: white;
+}
+
+.status-message,
+.confirmation,
+.hero-section,
+.inventory-grid,
+.admin-grid,
+.admin-login,
+.empty-state {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+}
+
+.status-message {
+  background: #fff5d6;
+  border: 1px solid #ead486;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.hero-section {
+  align-items: end;
+  background:
+    linear-gradient(90deg, rgba(237, 248, 239, 0.96), rgba(255, 253, 248, 0.76)),
+    url('https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1600&q=80');
+  background-position: center;
+  background-size: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  min-height: 390px;
+  padding: clamp(28px, 6vw, 70px);
+}
+
+.eyebrow {
+  color: var(--coral);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.hero-section h1,
+.admin-login h1 {
+  font-size: clamp(2.4rem, 6vw, 5.8rem);
+  line-height: 0.95;
+  margin: 0;
+  max-width: 850px;
+}
+
+.hero-section p:not(.eyebrow) {
+  color: #38473e;
+  font-size: 1.18rem;
+  line-height: 1.6;
+  max-width: 620px;
+}
+
+.hero-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.hero-panel strong {
+  display: block;
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.hero-panel span {
+  color: var(--muted);
+}
+
+.confirmation {
+  align-items: center;
+  background: var(--sage);
+  border: 1px solid #bdd5c2;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.confirmation p {
+  margin: 4px 0 0;
+}
+
+.confirmation button,
+.uniform-card button,
+.reservation-modal button[type='submit'],
+.admin-panel button,
+.admin-login button,
+.order-row button {
+  background: var(--blue);
+  border-radius: 8px;
+  color: white;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 11px 16px;
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.uniform-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(23, 33, 27, 0.06);
+  overflow: hidden;
+}
+
+.uniform-card img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.uniform-card-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.card-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.card-heading h2,
+.admin-panel h2,
+.reservation-modal h2 {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.card-heading span {
+  background: var(--mint);
+  border-radius: 999px;
+  color: #2e5b38;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.uniform-card p {
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.empty-state {
+  background: white;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  margin-top: 22px;
+  padding: 34px;
+  text-align: center;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(23, 33, 27, 0.52);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 10;
+}
+
+.reservation-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 0.85fr 1fr;
+  max-height: calc(100vh - 40px);
+  max-width: 860px;
+  overflow: auto;
+  position: relative;
+  width: 100%;
+}
+
+.reservation-modal img {
+  height: 100%;
+  min-height: 460px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.reservation-modal form,
+.admin-panel,
+.admin-login form {
+  display: grid;
+  gap: 14px;
+}
+
+.reservation-modal form {
+  padding: 30px;
+}
+
+.close-button {
+  background: var(--ink);
+  border-radius: 999px;
+  color: white;
+  height: 36px;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 36px;
+}
+
+label {
+  color: var(--ink);
+  display: grid;
+  font-weight: 800;
+  gap: 7px;
+}
+
+input,
+select,
+textarea {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  min-height: 44px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.admin-login {
+  align-items: center;
+  display: grid;
+  min-height: 70vh;
+}
+
+.admin-login form {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-width: 680px;
+  padding: clamp(24px, 6vw, 54px);
+}
+
+.admin-login h1 {
+  font-size: clamp(2rem, 6vw, 4rem);
+  margin-bottom: 14px;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.admin-panel.wide {
+  grid-column: 1 / -1;
+}
+
+.panel-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-heading strong {
+  background: var(--gold);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.table-list,
+.slot-list,
+.inventory-status {
+  display: grid;
+  gap: 10px;
+}
+
+.order-row {
+  align-items: center;
+  background: var(--mint);
+  border: 1px solid #d5e6d8;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.order-row span,
+.order-row small,
+.slot-list span,
+.inventory-status span {
+  color: var(--muted);
+  display: block;
+}
+
+.slot-list,
+.inventory-status {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 14px;
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .topbar,
+  .confirmation,
+  .order-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hero-section,
+  .inventory-grid,
+  .admin-grid,
+  .reservation-modal {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-section {
+    min-height: 520px;
+  }
+
+  .hero-panel {
+    max-width: 220px;
+  }
+
+  .reservation-modal img {
+    max-height: 260px;
+    min-height: 240px;
+  }
+}
