@@ -339,7 +339,9 @@ function TailorSt() {
     <main className="app-shell">
       <header className="topbar">
         <button className="brand-button" onClick={() => setView('shop')} type="button">
-          <span className="brand-mark">TS</span>
+          <span className="brand-mark">
+            <img src="/tailor-st-logo.png" alt="" />
+          </span>
           <span>
             <strong>Tailor St</strong>
             <small>Uniforms, shared with care</small>
