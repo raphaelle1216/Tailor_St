@@ -52,7 +52,7 @@ const emptyItem = {
 };
 
 const adminEmail = process.env.REACT_APP_ADMIN_EMAIL || 'courchia.raphaelle@gmail.com';
-const localAdminPasscode = process.env.REACT_APP_ADMIN_PASSCODE || 'OlympiqueDeMarseille13';
+const localAdminPasscode = process.env.REACT_APP_ADMIN_PASSCODE || '';
 
 function formatSlotLabel(dateValue, startValue, endValue) {
   const date = new Date(`${dateValue}T${startValue}`);
