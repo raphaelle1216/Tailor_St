@@ -369,7 +369,7 @@ function TailorSt() {
           <section className="hero-section">
             <div>
               <p className="eyebrow">No cost. Private pickup. School-ready.</p>
-              <h1>Find the uniform pieces you need without the stress.</h1>
+              <h1>Find the uniform you need. Free the budget you deserve.</h1>
               <p>
                 Browse donated uniforms, reserve what fits, and choose a pickup time. No payment is needed.
               </p>
