@@ -1,14 +1,16 @@
 :root {
-  --ink: #17211b;
-  --muted: #65736b;
-  --paper: #fffdf8;
-  --line: #dce4dc;
-  --sage: #d8eadb;
-  --mint: #edf8ef;
-  --blue: #355c7d;
-  --coral: #c85c45;
-  --gold: #f4c95d;
-  --shadow: 0 18px 60px rgba(23, 33, 27, 0.14);
+  --ink: #2d3033;
+  --charcoal: #3a3d41;
+  --muted: #74706f;
+  --paper: #fffaf7;
+  --surface: #ffffff;
+  --line: #eadeda;
+  --rose: #f28aa8;
+  --rose-soft: #fff0f4;
+  --rose-deep: #bd526e;
+  --sage: #e8f0e7;
+  --cream: #fff5e7;
+  --shadow: 0 18px 46px rgba(45, 48, 51, 0.12);
 }
 
 * {
@@ -16,7 +18,8 @@
 }
 
 body {
-  background: var(--paper);
+  background:
+    linear-gradient(180deg, #fff7f8 0%, var(--paper) 36%, #f8fbf6 100%);
   color: var(--ink);
 }
 
@@ -34,10 +37,10 @@ input[type='file'] {
 }
 
 .file-pill {
-  background: var(--mint);
-  border: 1px solid #d5e6d8;
+  background: var(--rose-soft);
+  border: 1px solid #f7c8d5;
   border-radius: 999px;
-  color: #2e5b38;
+  color: var(--rose-deep);
   display: inline-flex;
   font-size: 0.85rem;
   font-weight: 800;
@@ -52,20 +55,26 @@ input[type='file'] {
 button {
   border: 0;
   cursor: pointer;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .app-shell {
   min-height: 100vh;
-  padding: 20px;
+  padding: 22px;
 }
 
 .topbar {
   align-items: center;
+  background: rgba(255, 250, 247, 0.86);
+  border: 1px solid rgba(234, 222, 218, 0.84);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(45, 48, 51, 0.06);
   display: flex;
   gap: 16px;
   justify-content: space-between;
   margin: 0 auto 20px;
   max-width: 1180px;
+  padding: 10px 12px;
 }
 
 .brand-button {
@@ -74,8 +83,13 @@ button {
   color: var(--ink);
   display: flex;
   gap: 12px;
-  padding: 0;
+  padding: 0 4px 0 0;
   text-align: left;
+}
+
+.brand-button:hover .brand-mark {
+  box-shadow: 0 10px 24px rgba(189, 82, 110, 0.14);
+  transform: translateY(-1px);
 }
 
 .brand-mark {
@@ -88,6 +102,7 @@ button {
   height: 46px;
   overflow: hidden;
   place-items: center;
+  transition: box-shadow 160ms ease, transform 160ms ease;
   width: 46px;
 }
 
@@ -106,12 +121,13 @@ button {
 
 .brand-button small {
   color: var(--muted);
+  font-size: 0.82rem;
   margin-top: 2px;
 }
 
 .nav-actions {
   align-items: center;
-  background: white;
+  background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;
@@ -122,11 +138,22 @@ button {
   background: transparent;
   border-radius: 6px;
   color: var(--muted);
+  font-weight: 800;
   padding: 10px 14px;
 }
 
+.nav-actions button:hover {
+  background: var(--rose-soft);
+  color: var(--ink);
+}
+
 .nav-actions button.active {
-  background: var(--ink);
+  background: var(--charcoal);
+  color: white;
+}
+
+.nav-actions button.active:hover {
+  background: #24272a;
   color: white;
 }
 
@@ -143,17 +170,19 @@ button {
 }
 
 .status-message {
-  background: #fff5d6;
-  border: 1px solid #ead486;
+  background: var(--cream);
+  border: 1px solid #efd8ad;
   border-radius: 8px;
   padding: 12px 14px;
 }
 
 .hero-section {
   align-items: end;
-  background: linear-gradient(135deg, var(--mint) 0%, var(--paper) 68%, #fff5d6 100%);
+  background:
+    linear-gradient(135deg, #ffffff 0%, var(--rose-soft) 46%, var(--cream) 100%);
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(45, 48, 51, 0.08);
   display: grid;
   gap: 28px;
   grid-template-columns: minmax(0, 1fr) 220px;
@@ -162,7 +191,7 @@ button {
 }
 
 .eyebrow {
-  color: var(--coral);
+  color: var(--rose-deep);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -179,16 +208,17 @@ button {
 }
 
 .hero-section p:not(.eyebrow) {
-  color: #38473e;
+  color: #5a5554;
   font-size: 1.18rem;
   line-height: 1.6;
   max-width: 620px;
 }
 
 .hero-panel {
-  background: white;
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #f2c7d2;
   border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(189, 82, 110, 0.08);
   padding: 22px;
 }
 
@@ -196,6 +226,7 @@ button {
   display: block;
   font-size: 3.5rem;
   line-height: 1;
+  color: var(--rose-deep);
 }
 
 .hero-panel span {
@@ -205,7 +236,7 @@ button {
 .confirmation {
   align-items: center;
   background: var(--sage);
-  border: 1px solid #bdd5c2;
+  border: 1px solid #d3dfd1;
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
@@ -223,12 +254,21 @@ button {
 .admin-panel button,
 .admin-login button,
 .order-row button {
-  background: var(--blue);
+  background: var(--charcoal);
   border-radius: 8px;
   color: white;
   font-weight: 800;
   min-height: 44px;
   padding: 11px 16px;
+}
+
+.confirmation button:hover,
+.uniform-card button:hover,
+.reservation-modal button[type='submit']:hover,
+.admin-panel button:hover,
+.admin-login button:hover,
+.order-row button:hover {
+  background: #24272a;
 }
 
 .inventory-grid {
@@ -239,11 +279,18 @@ button {
 }
 
 .uniform-card {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(23, 33, 27, 0.06);
+  box-shadow: 0 12px 30px rgba(45, 48, 51, 0.07);
   overflow: hidden;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.uniform-card:hover {
+  border-color: #f0c1cc;
+  box-shadow: 0 18px 42px rgba(45, 48, 51, 0.11);
+  transform: translateY(-2px);
 }
 
 .uniform-card img {
@@ -275,9 +322,9 @@ button {
 }
 
 .card-heading span {
-  background: var(--mint);
+  background: var(--rose-soft);
   border-radius: 999px;
-  color: #2e5b38;
+  color: var(--rose-deep);
   flex: 0 0 auto;
   font-size: 0.82rem;
   font-weight: 800;
@@ -293,7 +340,7 @@ button {
 }
 
 .empty-state {
-  background: white;
+  background: var(--surface);
   border: 1px dashed var(--line);
   border-radius: 8px;
   margin-top: 22px;
@@ -303,7 +350,7 @@ button {
 
 .modal-backdrop {
   align-items: center;
-  background: rgba(23, 33, 27, 0.52);
+  background: rgba(45, 48, 51, 0.58);
   display: flex;
   inset: 0;
   justify-content: center;
@@ -313,7 +360,7 @@ button {
 }
 
 .reservation-modal {
-  background: white;
+  background: var(--surface);
   border-radius: 8px;
   box-shadow: var(--shadow);
   display: grid;
@@ -344,7 +391,7 @@ button {
 }
 
 .close-button {
-  background: var(--ink);
+  background: var(--charcoal);
   border-radius: 999px;
   color: white;
   height: 36px;
@@ -364,13 +411,28 @@ label {
 input,
 select,
 textarea {
-  background: white;
+  background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
   min-height: 44px;
   padding: 10px 12px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
   width: 100%;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #e9bdc8;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: 3px solid rgba(242, 138, 168, 0.32);
+  outline-offset: 2px;
 }
 
 textarea {
@@ -390,7 +452,7 @@ button:disabled {
 }
 
 .admin-login form {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
@@ -410,7 +472,7 @@ button:disabled {
 }
 
 .admin-panel {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px;
@@ -429,8 +491,9 @@ button:disabled {
 
 .panel-heading strong,
 .text-button {
-  background: var(--gold);
+  background: var(--rose-soft);
   border-radius: 999px;
+  color: var(--rose-deep);
   padding: 8px 12px;
 }
 
@@ -441,7 +504,7 @@ button:disabled {
 }
 
 .admin-panel .text-button {
-  background: var(--mint);
+  background: var(--cream);
   color: var(--ink);
   font-weight: 800;
   min-height: auto;
@@ -462,8 +525,8 @@ button:disabled {
 
 .order-row {
   align-items: center;
-  background: var(--mint);
-  border: 1px solid #d5e6d8;
+  background: #fff8f2;
+  border: 1px solid #eedfd4;
   border-radius: 8px;
   display: flex;
   gap: 12px;
@@ -513,6 +576,14 @@ button:disabled {
 
   .hero-panel {
     max-width: 220px;
+  }
+
+  .nav-actions {
+    width: 100%;
+  }
+
+  .nav-actions button {
+    flex: 1;
   }
 
   .reservation-modal img {
