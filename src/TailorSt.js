@@ -79,8 +79,8 @@ function makePickupCode() {
 
 function TailorSt() {
   const [view, setView] = useState('shop');
-  const [uniforms, setUniforms] = useState(demoUniforms);
-  const [slots, setSlots] = useState(demoSlots);
+  const [uniforms, setUniforms] = useState(() => (hasSupabaseConfig ? [] : demoUniforms));
+  const [slots, setSlots] = useState(() => (hasSupabaseConfig ? [] : demoSlots));
   const [bookings, setBookings] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -92,7 +92,7 @@ function TailorSt() {
   const [photoFile, setPhotoFile] = useState(null);
   const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
   const [statusMessage, setStatusMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(hasSupabaseConfig);
 
   const availableUniforms = useMemo(
     () => uniforms.filter((item) => item.status === 'available'),
@@ -392,24 +392,31 @@ function TailorSt() {
             </section>
           )}
 
-          <section className="inventory-grid" aria-label="Available uniforms">
-            {availableUniforms.map((item) => (
-              <article className="uniform-card" key={item.id}>
-                <img src={item.image_url || 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80'} alt="" />
-                <div className="uniform-card-body">
-                  <div className="card-heading">
-                    <h2>{item.title}</h2>
-                    <span>{item.size}</span>
+          {isLoading && availableUniforms.length === 0 ? (
+            <section className="empty-state">
+              <h2>Loading uniforms...</h2>
+              <p>Checking what is available right now.</p>
+            </section>
+          ) : (
+            <section className="inventory-grid" aria-label="Available uniforms">
+              {availableUniforms.map((item) => (
+                <article className="uniform-card" key={item.id}>
+                  <img src={item.image_url || 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80'} alt="" />
+                  <div className="uniform-card-body">
+                    <div className="card-heading">
+                      <h2>{item.title}</h2>
+                      <span>{item.size}</span>
+                    </div>
+                    <p>{item.category} · {item.condition}</p>
+                    <p className="muted">{item.notes}</p>
+                    <button onClick={() => setSelectedItem(item)} type="button">Reserve</button>
                   </div>
-                  <p>{item.category} · {item.condition}</p>
-                  <p className="muted">{item.notes}</p>
-                  <button onClick={() => setSelectedItem(item)} type="button">Reserve</button>
-                </div>
-              </article>
-            ))}
-          </section>
+                </article>
+              ))}
+            </section>
+          )}
 
-          {availableUniforms.length === 0 && (
+          {!isLoading && availableUniforms.length === 0 && (
             <section className="empty-state">
               <h2>No uniforms are available right now.</h2>
               <p>Check back soon, or ask the program organizer about upcoming donations.</p>
