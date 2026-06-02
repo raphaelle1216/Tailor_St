@@ -1,5 +1,8 @@
 {
   "appId": "com.raphaelle1216.tailorst",
   "appName": "Tailor St",
-  "webDir": "build"
+  "webDir": "build",
+  "ios": {
+    "contentInset": "always"
+  }
 }

@@ -60,7 +60,7 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  padding: 22px;
+  padding: calc(22px + env(safe-area-inset-top, 0px)) 22px calc(22px + env(safe-area-inset-bottom, 0px));
 }
 
 .topbar {
@@ -551,7 +551,7 @@ button:disabled {
 
 @media (max-width: 860px) {
   .app-shell {
-    padding: 14px;
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
   }
 
   .topbar,
