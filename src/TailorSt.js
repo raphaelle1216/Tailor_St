@@ -51,6 +51,9 @@ const emptyItem = {
   status: 'available',
 };
 
+const adminEmail = process.env.REACT_APP_ADMIN_EMAIL || 'courchia.raphaelle@gmail.com';
+const localAdminPasscode = process.env.REACT_APP_ADMIN_PASSCODE || 'OlympiqueDeMarseille13';
+
 function formatSlotLabel(dateValue, startValue, endValue) {
   const date = new Date(`${dateValue}T${startValue}`);
   const day = new Intl.DateTimeFormat('en-US', {
@@ -84,7 +87,7 @@ function TailorSt() {
   const [studentNote, setStudentNote] = useState('');
   const [confirmation, setConfirmation] = useState(null);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
-  const [adminCredentials, setAdminCredentials] = useState({ email: '', password: '' });
+  const [adminPasscode, setAdminPasscode] = useState('');
   const [newItem, setNewItem] = useState(emptyItem);
   const [photoFile, setPhotoFile] = useState(null);
   const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
@@ -220,9 +223,12 @@ function TailorSt() {
     event.preventDefault();
     if (hasSupabaseConfig) {
       setIsLoading(true);
-      const result = await supabase.auth.signInWithPassword(adminCredentials);
+      const result = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPasscode,
+      });
       if (result.error) {
-        setStatusMessage('That admin login did not work.');
+        setStatusMessage('That admin passcode did not work.');
         setIsLoading(false);
         return;
       }
@@ -233,8 +239,7 @@ function TailorSt() {
       return;
     }
 
-    const expected = process.env.REACT_APP_ADMIN_PASSCODE || 'tailorst-admin';
-    if (adminCredentials.password !== expected) {
+    if (adminPasscode !== localAdminPasscode) {
       setStatusMessage('That admin passcode did not work.');
       return;
     }
@@ -415,7 +420,7 @@ function TailorSt() {
         <AdminView
           addItem={addItem}
           addSlot={addSlot}
-          adminCredentials={adminCredentials}
+          adminPasscode={adminPasscode}
           adminUnlocked={adminUnlocked}
           bookings={bookings}
           completeBooking={completeBooking}
@@ -423,7 +428,7 @@ function TailorSt() {
           newItem={newItem}
           newSlot={newSlot}
           photoFile={photoFile}
-          setAdminCredentials={setAdminCredentials}
+          setAdminPasscode={setAdminPasscode}
           setNewItem={setNewItem}
           setNewSlot={setNewSlot}
           setPhotoFile={setPhotoFile}
@@ -476,7 +481,7 @@ function TailorSt() {
 function AdminView({
   addItem,
   addSlot,
-  adminCredentials,
+  adminPasscode,
   adminUnlocked,
   bookings,
   completeBooking,
@@ -484,7 +489,7 @@ function AdminView({
   newItem,
   newSlot,
   photoFile,
-  setAdminCredentials,
+  setAdminPasscode,
   setNewItem,
   setNewSlot,
   setPhotoFile,
@@ -499,24 +504,13 @@ function AdminView({
         <form onSubmit={unlockAdmin}>
           <p className="eyebrow">Admin portal</p>
           <h1>Manage inventory, pickup slots, and reservations.</h1>
-          {hasSupabaseConfig && (
-            <label>
-              Email
-              <input
-                type="email"
-                value={adminCredentials.email}
-                onChange={(event) => setAdminCredentials({ ...adminCredentials, email: event.target.value })}
-                placeholder="admin@example.com"
-              />
-            </label>
-          )}
           <label>
-            {hasSupabaseConfig ? 'Password' : 'Passcode'}
+            Passcode
             <input
               type="password"
-              value={adminCredentials.password}
-              onChange={(event) => setAdminCredentials({ ...adminCredentials, password: event.target.value })}
-              placeholder={hasSupabaseConfig ? 'Enter admin password' : 'Enter admin passcode'}
+              value={adminPasscode}
+              onChange={(event) => setAdminPasscode(event.target.value)}
+              placeholder="Enter admin passcode"
             />
           </label>
           <button disabled={isLoading} type="submit">{isLoading ? 'Opening...' : 'Open admin'}</button>
