@@ -143,11 +143,7 @@ button {
 
 .hero-section {
   align-items: end;
-  background:
-    linear-gradient(90deg, rgba(237, 248, 239, 0.96), rgba(255, 253, 248, 0.76)),
-    url('https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1600&q=80');
-  background-position: center;
-  background-size: cover;
+  background: linear-gradient(135deg, var(--mint) 0%, var(--paper) 68%, #fff5d6 100%);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: grid;
@@ -504,7 +500,7 @@ button:disabled {
   }
 
   .hero-section {
-    min-height: 520px;
+    min-height: 430px;
   }
 
   .hero-panel {
