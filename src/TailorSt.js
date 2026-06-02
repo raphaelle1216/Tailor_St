@@ -530,7 +530,9 @@ function DonateView() {
           <span>3</span>
           <div>
             <h2>Drop off at school</h2>
-            <p>Place your donation in the Tailor St box next to the front office.</p>
+            <p>
+              Place your donation in the Tailor St box next to the front office at 2907 Taylor St.
+            </p>
           </div>
         </article>
       </div>
