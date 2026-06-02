@@ -4,9 +4,9 @@ import './TailorSt.css';
 
 const demoUniforms = [
   {
-    id: 'blazer-1',
-    title: 'Navy school blazer',
-    category: 'Blazer',
+    id: 'sweater-1',
+    title: 'Navy school sweater',
+    category: 'Sweater',
     size: 'Youth M',
     condition: 'Gently used',
     notes: 'Freshly cleaned, small mark near cuff.',
@@ -24,12 +24,12 @@ const demoUniforms = [
     status: 'available',
   },
   {
-    id: 'pants-1',
-    title: 'Khaki uniform pants',
-    category: 'Pants',
-    size: '30 waist',
+    id: 'skirt-1',
+    title: 'Long uniform skirt',
+    category: 'Skirt',
+    size: 'Youth L',
     condition: 'Good',
-    notes: 'Hemmed for a shorter inseam.',
+    notes: 'Long school-approved length.',
     image_url: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=80',
     status: 'available',
   },
@@ -356,8 +356,8 @@ function TailorSt() {
           <button className={view === 'shop' ? 'active' : ''} onClick={() => setView('shop')} type="button">
             Browse
           </button>
-          <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')} type="button">
-            Admin
+          <button className={view === 'donate' ? 'active' : ''} onClick={() => setView('donate')} type="button">
+            Donate
           </button>
         </nav>
       </header>
@@ -423,6 +423,8 @@ function TailorSt() {
             </section>
           )}
         </>
+      ) : view === 'donate' ? (
+        <DonateView />
       ) : (
         <AdminView
           addItem={addItem}
@@ -445,6 +447,16 @@ function TailorSt() {
           unlockAdmin={unlockAdmin}
         />
       )}
+
+      <footer className="admin-access">
+        <button
+          className={view === 'admin' ? 'active' : ''}
+          onClick={() => setView('admin')}
+          type="button"
+        >
+          Admin
+        </button>
+      </footer>
 
       {selectedItem && (
         <div className="modal-backdrop" role="presentation">
@@ -482,6 +494,47 @@ function TailorSt() {
         </div>
       )}
     </main>
+  );
+}
+
+function DonateView() {
+  return (
+    <section className="donate-page">
+      <div className="donate-hero">
+        <p className="eyebrow">Donate uniforms</p>
+        <h1>Help another student by passing on what no longer fits.</h1>
+        <p>
+          We currently accept clean shirts, long skirts, collars, and sweaters for families in our school community.
+        </p>
+      </div>
+
+      <div className="donation-steps" aria-label="Donation instructions">
+        <article>
+          <span>1</span>
+          <div>
+            <h2>Check the condition</h2>
+            <p>
+              Please donate items that are in relatively good condition: no tears, no stains, and ready for another student to wear.
+              Skirts should be the long school-approved style.
+            </p>
+          </div>
+        </article>
+        <article>
+          <span>2</span>
+          <div>
+            <h2>Wash everything beforehand</h2>
+            <p>Please wash donated uniforms before dropping them off so they are fresh and ready to be sorted.</p>
+          </div>
+        </article>
+        <article>
+          <span>3</span>
+          <div>
+            <h2>Drop off at school</h2>
+            <p>Place your donation in the Tailor St box next to the front office.</p>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -561,15 +614,14 @@ function AdminView({
         <h2>Post a uniform</h2>
         <label>
           Item name
-          <input value={newItem.title} onChange={(event) => setNewItem({ ...newItem, title: event.target.value })} placeholder="Navy blazer" />
+          <input value={newItem.title} onChange={(event) => setNewItem({ ...newItem, title: event.target.value })} placeholder="White uniform shirt" />
         </label>
         <label>
           Category
           <select value={newItem.category} onChange={(event) => setNewItem({ ...newItem, category: event.target.value })}>
-            <option>Blazer</option>
             <option>Shirts</option>
-            <option>Pants</option>
             <option>Skirt</option>
+            <option>Collar</option>
             <option>Sweater</option>
             <option>Other</option>
           </select>
