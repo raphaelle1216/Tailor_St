@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720" role="img" aria-label="Tailor Street uniform placeholder">
+  <rect width="900" height="720" fill="#fff8f7"/>
+  <rect x="72" y="72" width="756" height="576" rx="28" fill="#ffffff" stroke="#efd9d8" stroke-width="8"/>
+  <path d="M344 182h212l76 64v110l-72-18v238c-58 32-128 48-210 48s-152-16-210-48V338l-72 18V246l76-64h200z" fill="#f58aa7"/>
+  <path d="M342 182c20 60 48 94 84 102 8 2 16 3 24 3s16-1 24-3c36-8 64-42 84-102" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <path d="M388 198l-44 118 86-58M512 198l44 118-86-58" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M450 288v204" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="450" cy="346" r="14" fill="#ffffff"/>
+  <circle cx="450" cy="404" r="14" fill="#ffffff"/>
+  <circle cx="450" cy="462" r="14" fill="#ffffff"/>
+  <path d="M190 174c126-70 298-92 468-42 40 12 80 28 120 50" fill="none" stroke="#34373c" stroke-width="42" stroke-linecap="round"/>
+  <path d="M142 566c106 82 272 116 446 82 78-15 150-43 212-82" fill="none" stroke="#34373c" stroke-width="42" stroke-linecap="round"/>
+  <path d="M266 148l42-14M384 112l46-5M512 108l46 6M632 140l42 16M266 614l42 16M384 648l46 6M512 654l46-6M632 622l42-16" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+</svg>

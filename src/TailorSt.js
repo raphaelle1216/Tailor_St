@@ -10,7 +10,7 @@ const demoUniforms = [
     size: 'Youth M',
     condition: 'Gently used',
     notes: 'Freshly cleaned, small mark near cuff.',
-    image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=900&q=80',
+    image_url: '/uniform-placeholder.svg',
     status: 'available',
   },
   {
@@ -20,7 +20,7 @@ const demoUniforms = [
     size: 'Adult S',
     condition: 'Like new',
     notes: 'Set of two short-sleeve shirts.',
-    image_url: 'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?auto=format&fit=crop&w=900&q=80',
+    image_url: '/uniform-placeholder.svg',
     status: 'available',
   },
   {
@@ -30,7 +30,7 @@ const demoUniforms = [
     size: 'Youth L',
     condition: 'Good',
     notes: 'Long school-approved length.',
-    image_url: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=80',
+    image_url: '/uniform-placeholder.svg',
     status: 'available',
   },
 ];
@@ -401,7 +401,7 @@ function TailorSt() {
             <section className="inventory-grid" aria-label="Available uniforms">
               {availableUniforms.map((item) => (
                 <article className="uniform-card" key={item.id}>
-                  <img src={item.image_url || 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80'} alt="" />
+                  <img src={item.image_url || '/uniform-placeholder.svg'} alt="" />
                   <div className="uniform-card-body">
                     <div className="card-heading">
                       <h2>{item.title}</h2>
