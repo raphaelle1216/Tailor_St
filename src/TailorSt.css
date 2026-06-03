@@ -365,9 +365,12 @@ button {
 }
 
 .uniform-card img {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
+  background: #ffffff;
+  box-sizing: border-box;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 24px;
   width: 100%;
 }
 
@@ -444,9 +447,12 @@ button {
 }
 
 .reservation-modal img {
+  background: #ffffff;
+  box-sizing: border-box;
   height: 100%;
   min-height: 460px;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 28px;
   width: 100%;
 }
 
