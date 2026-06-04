@@ -338,6 +338,16 @@ button {
   color: var(--ink);
 }
 
+.admin-panel .danger-button {
+  background: #fff0f1;
+  border: 1px solid #f0b9c0;
+  color: #a33a48;
+}
+
+.admin-panel .danger-button:hover {
+  background: #ffe2e6;
+}
+
 .confirmation button:hover,
 .uniform-card button:hover,
 .reservation-modal button[type='submit']:hover,

@@ -365,6 +365,27 @@ function TailorSt() {
     setIsLoading(false);
   }
 
+  async function deleteItem(item) {
+    const confirmed = window.confirm(`Delete ${item.title}? This removes it from your inventory list.`);
+    if (!confirmed) return;
+
+    setIsLoading(true);
+    if (hasSupabaseConfig) {
+      const result = await supabase.from('uniforms').delete().eq('id', item.id);
+
+      if (result.error) {
+        setStatusMessage('This item could not be deleted. If it has reservation history, change its status to Hidden / gone instead.');
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    setUniforms((items) => items.filter((entry) => entry.id !== item.id));
+    if (editingItemId === item.id) cancelEditingItem();
+    setStatusMessage('Item deleted.');
+    setIsLoading(false);
+  }
+
   async function addSlot(event) {
     event.preventDefault();
     if (!newSlot.date || !newSlot.startTime || !newSlot.endTime) return;
@@ -514,6 +535,7 @@ function TailorSt() {
           bookings={bookings}
           cancelEditingItem={cancelEditingItem}
           completeBooking={completeBooking}
+          deleteItem={deleteItem}
           editingItem={editingItem}
           editingItemId={editingItemId}
           editingPhotoFile={editingPhotoFile}
@@ -636,6 +658,7 @@ function AdminView({
   bookings,
   cancelEditingItem,
   completeBooking,
+  deleteItem,
   editingItem,
   editingItemId,
   editingPhotoFile,
@@ -898,6 +921,9 @@ function AdminView({
                     <small>{item.status === 'available' ? 'Visible on Browse' : item.status}</small>
                   </div>
                   <button onClick={() => startEditingItem(item)} type="button">Edit</button>
+                  <button className="danger-button" disabled={isLoading} onClick={() => deleteItem(item)} type="button">
+                    Delete
+                  </button>
                 </>
               )}
             </article>
