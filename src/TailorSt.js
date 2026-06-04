@@ -679,6 +679,9 @@ function AdminView({
   uniforms,
   unlockAdmin,
 }) {
+  const activeBookings = bookings.filter((booking) => booking.status === 'reserved');
+  const completedBookings = bookings.filter((booking) => booking.status === 'completed');
+
   if (!adminUnlocked) {
     return (
       <section className="admin-login">
@@ -709,24 +712,41 @@ function AdminView({
             <h2>Reservations</h2>
           </div>
           <div className="panel-actions">
-            <strong>{bookings.filter((booking) => booking.status === 'reserved').length} open</strong>
+            <strong>{activeBookings.length} open · {completedBookings.length} complete</strong>
             <button className="text-button" onClick={signOutAdmin} type="button">Sign out</button>
           </div>
         </div>
         <div className="table-list">
-          {bookings.map((booking) => (
+          <p className="eyebrow">Open reservations</p>
+          {activeBookings.map((booking) => (
             <article className="order-row" key={booking.id}>
               <div>
                 <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
                 <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
                 <small>Pickup code {booking.pickup_code}</small>
               </div>
-              <button disabled={booking.status === 'completed' || isLoading} onClick={() => completeBooking(booking)} type="button">
-                {booking.status === 'completed' ? 'Complete' : 'Check off'}
+              <button disabled={isLoading} onClick={() => completeBooking(booking)} type="button">
+                Check off
               </button>
             </article>
           ))}
-          {bookings.length === 0 && <p className="muted">No reservations yet.</p>}
+          {activeBookings.length === 0 && <p className="muted">No open reservations right now.</p>}
+
+          {completedBookings.length > 0 && (
+            <>
+              <p className="eyebrow">Completed orders</p>
+              {completedBookings.map((booking) => (
+                <article className="order-row completed-order" key={booking.id}>
+                  <div>
+                    <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
+                    <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
+                    <small>Pickup code {booking.pickup_code}</small>
+                  </div>
+                  <span className="status-pill">Complete</span>
+                </article>
+              ))}
+            </>
+          )}
         </div>
       </div>
 

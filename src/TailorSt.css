@@ -651,6 +651,20 @@ button:disabled {
   display: block;
 }
 
+.completed-order {
+  background: #fbfaf8;
+}
+
+.status-pill {
+  background: #f6edf0;
+  border-radius: 999px;
+  color: var(--accent-deep);
+  flex: 0 0 auto;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
 .slot-list,
 .inventory-editor {
   border-top: 1px solid var(--line);
