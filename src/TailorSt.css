@@ -333,6 +333,11 @@ button {
   padding: 11px 16px;
 }
 
+.admin-panel .secondary-button {
+  background: var(--cream);
+  color: var(--ink);
+}
+
 .confirmation button:hover,
 .uniform-card button:hover,
 .reservation-modal button[type='submit']:hover,
@@ -595,12 +600,13 @@ button:disabled {
 
 .table-list,
 .slot-list,
-.inventory-status {
+.inventory-editor {
   display: grid;
   gap: 10px;
 }
 
-.order-row {
+.order-row,
+.inventory-edit-row {
   align-items: center;
   background: #fff8f2;
   border: 1px solid #eedfd4;
@@ -611,19 +617,73 @@ button:disabled {
   padding: 12px;
 }
 
+.inventory-edit-row > img {
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  flex: 0 0 92px;
+  object-fit: contain;
+  padding: 8px;
+  width: 92px;
+}
+
+.inventory-edit-row > div {
+  min-width: 0;
+}
+
 .order-row span,
 .order-row small,
 .slot-list span,
-.inventory-status span {
+.inventory-edit-row span,
+.inventory-edit-row small {
   color: var(--muted);
   display: block;
 }
 
 .slot-list,
-.inventory-status {
+.inventory-editor {
   border-top: 1px solid var(--line);
   margin-top: 8px;
   padding-top: 14px;
+}
+
+.inventory-edit-form {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 170px minmax(0, 1fr);
+  width: 100%;
+}
+
+.edit-photo-preview {
+  align-self: start;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.edit-photo-preview img {
+  aspect-ratio: 1 / 1;
+  display: block;
+  object-fit: contain;
+  width: 100%;
+}
+
+.edit-field-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  grid-column: 2;
 }
 
 .admin-access {
@@ -657,7 +717,8 @@ button:disabled {
   .topbar,
   .panel-actions,
   .confirmation,
-  .order-row {
+  .order-row,
+  .inventory-edit-row {
     align-items: stretch;
     flex-direction: column;
   }
@@ -666,8 +727,14 @@ button:disabled {
   .inventory-grid,
   .admin-grid,
   .slot-time-grid,
-  .reservation-modal {
+  .reservation-modal,
+  .inventory-edit-form,
+  .edit-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .edit-actions {
+    grid-column: auto;
   }
 
   .hero-section {

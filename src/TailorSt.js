@@ -90,6 +90,9 @@ function TailorSt() {
   const [adminPasscode, setAdminPasscode] = useState('');
   const [newItem, setNewItem] = useState(emptyItem);
   const [photoFile, setPhotoFile] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingItem, setEditingItem] = useState(emptyItem);
+  const [editingPhotoFile, setEditingPhotoFile] = useState(null);
   const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(hasSupabaseConfig);
@@ -247,6 +250,18 @@ function TailorSt() {
     setStatusMessage('');
   }
 
+  async function uploadUniformPhoto(file) {
+    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+    const filePath = `${Date.now()}-${safeName}`;
+    const uploadResult = await supabase.storage.from('uniform-photos').upload(filePath, file);
+
+    if (uploadResult.error) {
+      throw new Error('The photo could not be uploaded yet. Check the Supabase storage bucket.');
+    }
+
+    return supabase.storage.from('uniform-photos').getPublicUrl(filePath).data.publicUrl;
+  }
+
   async function addItem(event) {
     event.preventDefault();
     const item = { ...newItem, title: newItem.title.trim(), size: newItem.size.trim(), notes: newItem.notes.trim() };
@@ -256,17 +271,13 @@ function TailorSt() {
     if (hasSupabaseConfig) {
       let imageUrl = item.image_url;
       if (photoFile) {
-        const safeName = photoFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-        const filePath = `${Date.now()}-${safeName}`;
-        const uploadResult = await supabase.storage.from('uniform-photos').upload(filePath, photoFile);
-
-        if (uploadResult.error) {
-          setStatusMessage('The photo could not be uploaded yet. Check the Supabase storage bucket.');
+        try {
+          imageUrl = await uploadUniformPhoto(photoFile);
+        } catch (error) {
+          setStatusMessage(error.message);
           setIsLoading(false);
           return;
         }
-
-        imageUrl = supabase.storage.from('uniform-photos').getPublicUrl(filePath).data.publicUrl;
       }
 
       const result = await supabase.from('uniforms').insert({ ...item, image_url: imageUrl }).select().single();
@@ -282,6 +293,75 @@ function TailorSt() {
     setNewItem(emptyItem);
     setPhotoFile(null);
     setStatusMessage('Item added.');
+    setIsLoading(false);
+  }
+
+  function startEditingItem(item) {
+    setEditingItemId(item.id);
+    setEditingItem({
+      title: item.title || '',
+      category: item.category || 'Shirts',
+      size: item.size || '',
+      condition: item.condition || 'Gently used',
+      notes: item.notes || '',
+      image_url: item.image_url || '',
+      status: item.status || 'available',
+    });
+    setEditingPhotoFile(null);
+    setStatusMessage('');
+  }
+
+  function cancelEditingItem() {
+    setEditingItemId(null);
+    setEditingItem(emptyItem);
+    setEditingPhotoFile(null);
+  }
+
+  async function saveEditedItem(event) {
+    event.preventDefault();
+    if (!editingItemId) return;
+
+    const item = {
+      ...editingItem,
+      title: editingItem.title.trim(),
+      size: editingItem.size.trim(),
+      notes: editingItem.notes.trim(),
+    };
+    if (!item.title || !item.size) return;
+
+    setIsLoading(true);
+    if (hasSupabaseConfig) {
+      let imageUrl = item.image_url;
+      if (editingPhotoFile) {
+        try {
+          imageUrl = await uploadUniformPhoto(editingPhotoFile);
+        } catch (error) {
+          setStatusMessage(error.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const result = await supabase
+        .from('uniforms')
+        .update({ ...item, image_url: imageUrl })
+        .eq('id', editingItemId)
+        .select()
+        .single();
+
+      if (result.error) {
+        setStatusMessage('The item could not be updated yet. Check Supabase table permissions.');
+        setIsLoading(false);
+        return;
+      }
+
+      setUniforms((items) => items.map((entry) => (entry.id === editingItemId ? result.data : entry)));
+    } else {
+      setUniforms((items) => items.map((entry) => (entry.id === editingItemId ? { ...entry, ...item } : entry)));
+    }
+
+    setStatusMessage('Item updated.');
+    cancelEditingItem();
     setIsLoading(false);
   }
 
@@ -432,17 +512,25 @@ function TailorSt() {
           adminPasscode={adminPasscode}
           adminUnlocked={adminUnlocked}
           bookings={bookings}
+          cancelEditingItem={cancelEditingItem}
           completeBooking={completeBooking}
+          editingItem={editingItem}
+          editingItemId={editingItemId}
+          editingPhotoFile={editingPhotoFile}
           isLoading={isLoading}
           newItem={newItem}
           newSlot={newSlot}
           photoFile={photoFile}
+          saveEditedItem={saveEditedItem}
           setAdminPasscode={setAdminPasscode}
+          setEditingItem={setEditingItem}
+          setEditingPhotoFile={setEditingPhotoFile}
           setNewItem={setNewItem}
           setNewSlot={setNewSlot}
           setPhotoFile={setPhotoFile}
           signOutAdmin={signOutAdmin}
           slots={slots}
+          startEditingItem={startEditingItem}
           uniforms={uniforms}
           unlockAdmin={unlockAdmin}
         />
@@ -546,17 +634,25 @@ function AdminView({
   adminPasscode,
   adminUnlocked,
   bookings,
+  cancelEditingItem,
   completeBooking,
+  editingItem,
+  editingItemId,
+  editingPhotoFile,
   isLoading,
   newItem,
   newSlot,
   photoFile,
+  saveEditedItem,
   setAdminPasscode,
+  setEditingItem,
+  setEditingPhotoFile,
   setNewItem,
   setNewSlot,
   setPhotoFile,
   signOutAdmin,
   slots,
+  startEditingItem,
   uniforms,
   unlockAdmin,
 }) {
@@ -698,11 +794,115 @@ function AdminView({
 
       <div className="admin-panel wide">
         <p className="eyebrow">Overview</p>
-        <h2>Inventory status</h2>
-        <div className="inventory-status">
+        <h2>Inventory editor</h2>
+        <div className="inventory-editor">
           {uniforms.map((item) => (
-            <span key={item.id}>{item.title} · {item.size} · {item.status}</span>
+            <article className="inventory-edit-row" key={item.id}>
+              {editingItemId === item.id ? (
+                <form className="inventory-edit-form" onSubmit={saveEditedItem}>
+                  <div className="edit-photo-preview">
+                    <img src={editingItem.image_url || '/uniform-placeholder.svg'} alt="" />
+                  </div>
+                  <div className="edit-field-grid">
+                    <label>
+                      Item name
+                      <input
+                        value={editingItem.title}
+                        onChange={(event) => setEditingItem({ ...editingItem, title: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Category
+                      <select
+                        value={editingItem.category}
+                        onChange={(event) => setEditingItem({ ...editingItem, category: event.target.value })}
+                      >
+                        <option>Shirts</option>
+                        <option>Skirt</option>
+                        <option>Collar</option>
+                        <option>Sweater</option>
+                        <option>Other</option>
+                      </select>
+                    </label>
+                    <label>
+                      Size
+                      <input
+                        value={editingItem.size}
+                        onChange={(event) => setEditingItem({ ...editingItem, size: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Condition
+                      <select
+                        value={editingItem.condition}
+                        onChange={(event) => setEditingItem({ ...editingItem, condition: event.target.value })}
+                      >
+                        <option>Like new</option>
+                        <option>Gently used</option>
+                        <option>Good</option>
+                        <option>Needs minor repair</option>
+                      </select>
+                    </label>
+                    <label>
+                      Status
+                      <select
+                        value={editingItem.status}
+                        onChange={(event) => setEditingItem({ ...editingItem, status: event.target.value })}
+                      >
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="completed">Hidden / gone</option>
+                      </select>
+                    </label>
+                    <label>
+                      Replace photo
+                      <input
+                        accept="image/*"
+                        type="file"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setEditingPhotoFile(file);
+                          if (file && !hasSupabaseConfig) {
+                            setEditingItem({ ...editingItem, image_url: URL.createObjectURL(file) });
+                          }
+                        }}
+                      />
+                      {editingPhotoFile && <span className="file-pill">{editingPhotoFile.name}</span>}
+                    </label>
+                    <label className="wide-field">
+                      Photo URL
+                      <input
+                        value={editingItem.image_url}
+                        onChange={(event) => setEditingItem({ ...editingItem, image_url: event.target.value })}
+                      />
+                    </label>
+                    <label className="wide-field">
+                      Notes
+                      <textarea
+                        value={editingItem.notes}
+                        onChange={(event) => setEditingItem({ ...editingItem, notes: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="edit-actions">
+                    <button disabled={isLoading} type="submit">{isLoading ? 'Saving...' : 'Save changes'}</button>
+                    <button className="secondary-button" onClick={cancelEditingItem} type="button">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <img src={item.image_url || '/uniform-placeholder.svg'} alt="" />
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.category} · {item.size} · {item.condition}</span>
+                    <small>{item.status === 'available' ? 'Visible on Browse' : item.status}</small>
+                  </div>
+                  <button onClick={() => startEditingItem(item)} type="button">Edit</button>
+                </>
+              )}
+            </article>
           ))}
+          {uniforms.length === 0 && <p className="muted">No inventory yet.</p>}
         </div>
       </div>
     </section>
