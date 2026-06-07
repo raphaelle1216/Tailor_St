@@ -1,4 +1,6 @@
 create extension if not exists "pgcrypto";
+create extension if not exists pg_net;
+create extension if not exists pg_cron;
 
 insert into storage.buckets (id, name, public)
 values ('uniform-photos', 'uniform-photos', true)
@@ -34,11 +36,17 @@ create table if not exists public.bookings (
   student_email text,
   student_note text default '',
   status text not null default 'reserved' check (status in ('reserved', 'completed', 'cancelled')),
+  confirmation_email_sent_at timestamptz,
+  reminder_email_sent_at timestamptz,
+  email_error text,
   created_at timestamptz not null default now()
 );
 
 alter table public.bookings
-  add column if not exists student_email text;
+  add column if not exists student_email text,
+  add column if not exists confirmation_email_sent_at timestamptz,
+  add column if not exists reminder_email_sent_at timestamptz,
+  add column if not exists email_error text;
 
 create index if not exists uniforms_status_idx on public.uniforms(status);
 create index if not exists pickup_slots_active_idx on public.pickup_slots(is_active);
@@ -125,6 +133,183 @@ create policy "Public can view active pickup slots"
   using (is_active = true and booked_count < capacity);
 
 grant execute on function public.reserve_uniform(uuid, uuid, text, text, text) to anon, authenticated;
+
+create or replace function public.tailor_st_vault_secret(secret_name text)
+returns text
+language sql
+security definer
+set search_path = public, vault
+as $$
+  select decrypted_secret
+  from vault.decrypted_secrets
+  where name = secret_name
+  limit 1;
+$$;
+
+create or replace function public.tailor_st_send_booking_email(
+  requested_booking_id uuid,
+  requested_email_kind text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, net
+as $$
+declare
+  booking_record record;
+  resend_api_key text;
+  from_email text;
+  subject_text text;
+  body_text text;
+  send_at timestamptz := now();
+begin
+  select
+    b.id,
+    b.student_email,
+    b.pickup_code,
+    b.student_note,
+    b.status,
+    b.confirmation_email_sent_at,
+    b.reminder_email_sent_at,
+    u.title as uniform_title,
+    u.size as uniform_size,
+    ps.label as pickup_label,
+    ps.starts_at
+  into booking_record
+  from public.bookings b
+  join public.uniforms u on u.id = b.uniform_id
+  join public.pickup_slots ps on ps.id = b.slot_id
+  where b.id = requested_booking_id;
+
+  if not found then
+    return;
+  end if;
+
+  if booking_record.student_email is null or btrim(booking_record.student_email) = '' then
+    update public.bookings
+    set email_error = 'Email not sent: booking has no student_email.'
+    where id = requested_booking_id;
+    return;
+  end if;
+
+  resend_api_key := public.tailor_st_vault_secret('resend_api_key');
+  from_email := public.tailor_st_vault_secret('tailor_st_email_from');
+
+  if resend_api_key is null or btrim(resend_api_key) = '' or from_email is null or btrim(from_email) = '' then
+    update public.bookings
+    set email_error = 'Email not sent: missing resend_api_key or tailor_st_email_from Supabase Vault secret.'
+    where id = requested_booking_id;
+    return;
+  end if;
+
+  if requested_email_kind = 'confirmation' then
+    if booking_record.confirmation_email_sent_at is not null then
+      return;
+    end if;
+
+    subject_text := 'Your Tailor St pickup code is ' || booking_record.pickup_code;
+    body_text := 'Thank you for using Tailor St.' || E'\n\n'
+      || 'Your pickup code is: ' || booking_record.pickup_code || E'\n'
+      || 'Uniform: ' || coalesce(booking_record.uniform_title, 'Uniform item') || coalesce(' (' || booking_record.uniform_size || ')', '') || E'\n'
+      || 'Pickup time: ' || coalesce(booking_record.pickup_label, 'Your selected pickup time') || E'\n\n'
+      || 'Please show this pickup code when you arrive.';
+
+    update public.bookings
+    set confirmation_email_sent_at = send_at,
+        email_error = null
+    where id = requested_booking_id;
+  elsif requested_email_kind = 'reminder' then
+    if booking_record.reminder_email_sent_at is not null then
+      return;
+    end if;
+
+    subject_text := 'Reminder: your Tailor St pickup is in 24 hours';
+    body_text := 'This is a reminder that your Tailor St pickup is taking place in about 24 hours.' || E'\n\n'
+      || 'Pickup code: ' || booking_record.pickup_code || E'\n'
+      || 'Uniform: ' || coalesce(booking_record.uniform_title, 'Uniform item') || coalesce(' (' || booking_record.uniform_size || ')', '') || E'\n'
+      || 'Pickup time: ' || coalesce(booking_record.pickup_label, 'Your selected pickup time') || E'\n\n'
+      || 'Please show this pickup code when you arrive.';
+
+    update public.bookings
+    set reminder_email_sent_at = send_at,
+        email_error = null
+    where id = requested_booking_id;
+  else
+    raise exception 'Unknown booking email kind: %', requested_email_kind;
+  end if;
+
+  perform net.http_post(
+    url := 'https://api.resend.com/emails',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || resend_api_key
+    ),
+    body := jsonb_build_object(
+      'from', from_email,
+      'to', jsonb_build_array(booking_record.student_email),
+      'subject', subject_text,
+      'text', body_text
+    ),
+    timeout_milliseconds := 10000
+  );
+end;
+$$;
+
+create or replace function public.tailor_st_send_booking_confirmation_email()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.tailor_st_send_booking_email(new.id, 'confirmation');
+  return new;
+end;
+$$;
+
+drop trigger if exists send_booking_confirmation_email on public.bookings;
+create trigger send_booking_confirmation_email
+after insert on public.bookings
+for each row
+execute function public.tailor_st_send_booking_confirmation_email();
+
+create or replace function public.tailor_st_send_pickup_reminders()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  booking_record record;
+begin
+  for booking_record in
+    select b.id
+    from public.bookings b
+    join public.pickup_slots ps on ps.id = b.slot_id
+    where b.status = 'reserved'
+      and b.student_email is not null
+      and b.reminder_email_sent_at is null
+      and ps.starts_at is not null
+      and ps.starts_at between now() + interval '23 hours 45 minutes'
+        and now() + interval '24 hours 15 minutes'
+  loop
+    perform public.tailor_st_send_booking_email(booking_record.id, 'reminder');
+  end loop;
+end;
+$$;
+
+do $$
+begin
+  perform cron.unschedule('tailor-st-pickup-reminders');
+exception
+  when others then null;
+end $$;
+
+select cron.schedule(
+  'tailor-st-pickup-reminders',
+  '*/15 * * * *',
+  $$select public.tailor_st_send_pickup_reminders();$$
+);
 
 create policy "Admin full access to uniforms"
   on public.uniforms for all
