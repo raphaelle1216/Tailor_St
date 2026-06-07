@@ -304,22 +304,7 @@ button {
   margin: 0;
 }
 
-.confirmation {
-  align-items: center;
-  background: var(--sage);
-  border: 1px solid #d3dfd1;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  margin-top: 18px;
-  padding: 16px;
-}
-
-.confirmation p {
-  margin: 4px 0 0;
-}
-
-.confirmation button,
+.confirmation-modal button,
 .uniform-card button,
 .reservation-modal button[type='submit'],
 .admin-panel button,
@@ -348,7 +333,7 @@ button {
   background: #ffe2e6;
 }
 
-.confirmation button:hover,
+.confirmation-modal button:hover,
 .uniform-card button:hover,
 .reservation-modal button[type='submit']:hover,
 .admin-panel button:hover,
@@ -459,6 +444,42 @@ button {
   overflow: auto;
   position: relative;
   width: 100%;
+}
+
+.confirmation-modal {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
+  max-width: 560px;
+  padding: clamp(28px, 6vw, 46px);
+  text-align: center;
+  width: min(100%, 560px);
+}
+
+.confirmation-modal h2 {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.confirmation-modal p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.pickup-code-display {
+  background: var(--sage);
+  border: 2px solid #bfd1bc;
+  border-radius: 8px;
+  color: var(--charcoal);
+  font-size: clamp(2.8rem, 14vw, 5.8rem);
+  font-weight: 900;
+  line-height: 1;
+  padding: 22px 16px;
+  word-break: break-word;
 }
 
 .reservation-modal img {
@@ -740,7 +761,6 @@ button:disabled {
 
   .topbar,
   .panel-actions,
-  .confirmation,
   .order-row,
   .inventory-edit-row {
     align-items: stretch;

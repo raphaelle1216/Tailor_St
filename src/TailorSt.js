@@ -486,18 +486,6 @@ function TailorSt() {
             </div>
           </section>
 
-          {confirmation && (
-            <section className="confirmation">
-              <div>
-                <strong>Reservation saved</strong>
-                <p>
-                  Pickup code <b>{confirmation.pickupCode}</b> for {confirmation.item} at {confirmation.slot}.
-                </p>
-              </div>
-              <button onClick={() => setConfirmation(null)} type="button">Done</button>
-            </section>
-          )}
-
           {isLoading && availableUniforms.length === 0 ? (
             <section className="empty-state">
               <h2>Loading uniforms...</h2>
@@ -572,6 +560,22 @@ function TailorSt() {
           Admin
         </button>
       </footer>
+
+      {confirmation && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="confirmation-modal" role="dialog" aria-modal="true" aria-label="Reservation saved">
+            <p className="eyebrow">Reservation saved</p>
+            <h2>Show this pickup code when you arrive.</h2>
+            <div className="pickup-code-display" aria-label={`Pickup code ${confirmation.pickupCode}`}>
+              {confirmation.pickupCode}
+            </div>
+            <p>
+              {confirmation.item} is reserved for {confirmation.slot}.
+            </p>
+            <button onClick={() => setConfirmation(null)} type="button">Done</button>
+          </section>
+        </div>
+      )}
 
       {selectedItem && (
         <div className="modal-backdrop" role="presentation">
