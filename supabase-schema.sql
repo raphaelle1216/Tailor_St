@@ -31,10 +31,14 @@ create table if not exists public.bookings (
   uniform_id uuid not null references public.uniforms(id) on delete cascade,
   slot_id uuid not null references public.pickup_slots(id) on delete restrict,
   pickup_code text not null,
+  student_email text,
   student_note text default '',
   status text not null default 'reserved' check (status in ('reserved', 'completed', 'cancelled')),
   created_at timestamptz not null default now()
 );
+
+alter table public.bookings
+  add column if not exists student_email text;
 
 create index if not exists uniforms_status_idx on public.uniforms(status);
 create index if not exists pickup_slots_active_idx on public.pickup_slots(is_active);
@@ -44,6 +48,7 @@ create or replace function public.reserve_uniform(
   requested_uniform_id uuid,
   requested_slot_id uuid,
   requested_pickup_code text,
+  requested_student_email text,
   requested_student_note text default ''
 )
 returns public.bookings
@@ -55,6 +60,12 @@ declare
   slot_record public.pickup_slots;
   booking_record public.bookings;
 begin
+  if requested_student_email is null
+    or btrim(requested_student_email) = ''
+    or requested_student_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' then
+    raise exception 'A valid email address is required';
+  end if;
+
   select * into slot_record
   from public.pickup_slots
   where id = requested_slot_id
@@ -83,6 +94,7 @@ begin
     uniform_id,
     slot_id,
     pickup_code,
+    student_email,
     student_note,
     status
   )
@@ -90,6 +102,7 @@ begin
     requested_uniform_id,
     requested_slot_id,
     requested_pickup_code,
+    lower(btrim(requested_student_email)),
     requested_student_note,
     'reserved'
   )
@@ -111,7 +124,7 @@ create policy "Public can view active pickup slots"
   on public.pickup_slots for select
   using (is_active = true and booked_count < capacity);
 
-grant execute on function public.reserve_uniform(uuid, uuid, text, text) to anon, authenticated;
+grant execute on function public.reserve_uniform(uuid, uuid, text, text, text) to anon, authenticated;
 
 create policy "Admin full access to uniforms"
   on public.uniforms for all

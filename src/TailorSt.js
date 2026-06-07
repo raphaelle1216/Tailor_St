@@ -84,6 +84,7 @@ function TailorSt() {
   const [bookings, setBookings] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [reservationEmail, setReservationEmail] = useState('');
   const [studentNote, setStudentNote] = useState('');
   const [confirmation, setConfirmation] = useState(null);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -153,7 +154,8 @@ function TailorSt() {
 
   async function reserveItem(event) {
     event.preventDefault();
-    if (!selectedItem || !selectedSlot) return;
+    const email = reservationEmail.trim().toLowerCase();
+    if (!selectedItem || !selectedSlot || !email) return;
 
     const slot = slots.find((entry) => entry.id === selectedSlot);
     const pickupCode = makePickupCode();
@@ -161,6 +163,7 @@ function TailorSt() {
       uniform_id: selectedItem.id,
       slot_id: selectedSlot,
       pickup_code: pickupCode,
+      student_email: email,
       student_note: studentNote.trim(),
       status: 'reserved',
     };
@@ -172,10 +175,11 @@ function TailorSt() {
         requested_uniform_id: selectedItem.id,
         requested_slot_id: selectedSlot,
         requested_pickup_code: pickupCode,
+        requested_student_email: email,
         requested_student_note: studentNote.trim(),
       });
       if (bookingResult.error) {
-        setStatusMessage('This item could not be reserved. Please try another item or time.');
+        setStatusMessage('This item could not be reserved. Please check your email and pickup time.');
         setIsLoading(false);
         return;
       }
@@ -201,6 +205,7 @@ function TailorSt() {
     setConfirmation({ item: selectedItem.title, slot: slot.label, pickupCode });
     setSelectedItem(null);
     setSelectedSlot('');
+    setReservationEmail('');
     setStudentNote('');
     setIsLoading(false);
   }
@@ -574,9 +579,21 @@ function TailorSt() {
             <button className="close-button" onClick={() => setSelectedItem(null)} type="button">x</button>
             <img src={selectedItem.image_url} alt="" />
             <form onSubmit={reserveItem}>
-              <p className="eyebrow">Reserve anonymously</p>
+              <p className="eyebrow">Reserve for pickup</p>
               <h2>{selectedItem.title}</h2>
               <p className="muted">{selectedItem.size} · {selectedItem.condition}</p>
+              <label>
+                Email address
+                <input
+                  autoComplete="email"
+                  inputMode="email"
+                  onChange={(event) => setReservationEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                  value={reservationEmail}
+                />
+              </label>
               <label>
                 Pickup time
                 <select value={selectedSlot} onChange={(event) => setSelectedSlot(event.target.value)} required>
@@ -723,7 +740,9 @@ function AdminView({
               <div>
                 <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
                 <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
+                <small>Email {booking.student_email || 'Not collected'}</small>
                 <small>Pickup code {booking.pickup_code}</small>
+                {booking.student_note && <small>Note: {booking.student_note}</small>}
               </div>
               <button disabled={isLoading} onClick={() => completeBooking(booking)} type="button">
                 Check off
@@ -740,7 +759,9 @@ function AdminView({
                   <div>
                     <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
                     <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
+                    <small>Email {booking.student_email || 'Not collected'}</small>
                     <small>Pickup code {booking.pickup_code}</small>
+                    {booking.student_note && <small>Note: {booking.student_note}</small>}
                   </div>
                   <span className="status-pill">Complete</span>
                 </article>
