@@ -629,11 +629,47 @@ button:disabled {
   grid-template-columns: 1.2fr 1fr 1fr;
 }
 
+.add-slot-form,
+.slot-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
 .table-list,
 .slot-list,
 .inventory-editor {
   display: grid;
   gap: 10px;
+}
+
+.slot-edit-row {
+  align-items: center;
+  background: #fff8f2;
+  border: 1px solid #eedfd4;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.slot-edit-row > div:first-child {
+  min-width: 0;
+}
+
+.slot-edit-row strong,
+.slot-edit-row span,
+.slot-edit-row small {
+  display: block;
+}
+
+.slot-edit-row span,
+.slot-edit-row small {
+  color: var(--muted);
+}
+
+.slot-edit-form {
+  width: 100%;
 }
 
 .order-row,

@@ -38,6 +38,7 @@ create table if not exists public.bookings (
   status text not null default 'reserved' check (status in ('reserved', 'completed', 'cancelled')),
   confirmation_email_sent_at timestamptz,
   reminder_email_sent_at timestamptz,
+  completion_email_sent_at timestamptz,
   email_error text,
   created_at timestamptz not null default now()
 );
@@ -46,6 +47,7 @@ alter table public.bookings
   add column if not exists student_email text,
   add column if not exists confirmation_email_sent_at timestamptz,
   add column if not exists reminder_email_sent_at timestamptz,
+  add column if not exists completion_email_sent_at timestamptz,
   add column if not exists email_error text;
 
 create index if not exists uniforms_status_idx on public.uniforms(status);
@@ -272,6 +274,103 @@ create trigger send_booking_confirmation_email
 after insert on public.bookings
 for each row
 execute function public.tailor_st_send_booking_confirmation_email();
+
+create or replace function public.tailor_st_send_pickup_completion_email()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, net
+as $$
+declare
+  uniform_lines text;
+  resend_api_key text;
+  from_email text;
+  recipient_email text;
+  pickup_code_text text;
+  group_id uuid;
+  already_sent_at timestamptz;
+  incomplete_count integer;
+  request_id bigint;
+begin
+  if new.status <> 'completed' or old.status = 'completed' then
+    return new;
+  end if;
+
+  group_id := new.reservation_group_id;
+
+  select
+    max(b.student_email),
+    max(b.pickup_code),
+    max(b.completion_email_sent_at),
+    count(*) filter (where b.status <> 'completed')
+  into recipient_email, pickup_code_text, already_sent_at, incomplete_count
+  from public.bookings b
+  where b.reservation_group_id = group_id;
+
+  if incomplete_count > 0 or already_sent_at is not null then
+    return new;
+  end if;
+
+  if recipient_email is null or btrim(recipient_email) = '' then
+    update public.bookings
+    set email_error = 'Pickup completion email not sent: booking has no student_email.'
+    where reservation_group_id = group_id;
+    return new;
+  end if;
+
+  resend_api_key := public.tailor_st_vault_secret('resend_api_key');
+  from_email := public.tailor_st_vault_secret('tailor_st_email_from');
+
+  if resend_api_key is null or btrim(resend_api_key) = ''
+    or from_email is null or btrim(from_email) = '' then
+    update public.bookings
+    set email_error = 'Pickup completion email not sent: missing resend_api_key or tailor_st_email_from Supabase Vault secret.'
+    where reservation_group_id = group_id;
+    return new;
+  end if;
+
+  select string_agg(
+    '- ' || u.title || coalesce(' (' || u.size || ')', ''),
+    E'\n' order by u.title, u.size
+  )
+  into uniform_lines
+  from public.bookings b
+  join public.uniforms u on u.id = b.uniform_id
+  where b.reservation_group_id = group_id;
+
+  select net.http_post(
+    url := 'https://api.resend.com/emails',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || resend_api_key
+    ),
+    body := jsonb_build_object(
+      'from', from_email,
+      'to', jsonb_build_array(recipient_email),
+      'subject', 'Your Tailor St pickup is complete',
+      'text', 'Your Tailor St pickup has been marked complete.' || E'\n\n'
+        || 'Uniforms picked up:' || E'\n' || coalesce(uniform_lines, '- Uniform item') || E'\n\n'
+        || 'Pickup code: ' || coalesce(pickup_code_text, 'Not available') || E'\n\n'
+        || 'Thank you for using Tailor St. We hope these uniforms serve you well!'
+    ),
+    timeout_milliseconds := 10000
+  )
+  into request_id;
+
+  update public.bookings
+  set completion_email_sent_at = now(),
+      email_error = null
+  where reservation_group_id = group_id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists send_pickup_completion_email on public.bookings;
+create trigger send_pickup_completion_email
+after update of status on public.bookings
+for each row
+execute function public.tailor_st_send_pickup_completion_email();
 
 create or replace function public.tailor_st_send_pickup_reminders()
 returns void

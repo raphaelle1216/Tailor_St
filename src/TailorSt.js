@@ -73,6 +73,26 @@ function formatSlotLabel(dateValue, startValue, endValue) {
   return `${day}, ${start} - ${end}`;
 }
 
+function formatDateInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeInput(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function parseLabelEndTime(label, fallbackTime) {
+  const match = label?.match(/-\s*(\d{1,2}):(\d{2})\s*(AM|PM)\s*$/i);
+  if (!match) return fallbackTime;
+
+  let hour = Number(match[1]) % 12;
+  if (match[3].toUpperCase() === 'PM') hour += 12;
+  return `${String(hour).padStart(2, '0')}:${match[2]}`;
+}
+
 function makePickupCode() {
   return `TS-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -95,6 +115,8 @@ function TailorSt() {
   const [editingItem, setEditingItem] = useState(emptyItem);
   const [editingPhotoFile, setEditingPhotoFile] = useState(null);
   const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
+  const [editingSlotId, setEditingSlotId] = useState(null);
+  const [editingSlot, setEditingSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(hasSupabaseConfig);
 
@@ -422,6 +444,73 @@ function TailorSt() {
     setIsLoading(false);
   }
 
+  function startEditingSlot(slot) {
+    const start = slot.starts_at ? new Date(slot.starts_at) : new Date();
+    const startTime = formatTimeInput(start);
+    setEditingSlotId(slot.id);
+    setEditingSlot({
+      date: formatDateInput(start),
+      startTime,
+      endTime: parseLabelEndTime(slot.label, startTime),
+      capacity: Number(slot.capacity),
+    });
+    setStatusMessage('');
+  }
+
+  function cancelEditingSlot() {
+    setEditingSlotId(null);
+    setEditingSlot({ date: '', startTime: '', endTime: '', capacity: 1 });
+  }
+
+  async function saveEditedSlot(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submittedSlot = {
+      date: form.elements.slotDate.value,
+      startTime: form.elements.slotStartTime.value,
+      endTime: form.elements.slotEndTime.value,
+      capacity: form.elements.slotCapacity.value,
+    };
+    if (!editingSlotId || !submittedSlot.date || !submittedSlot.startTime || !submittedSlot.endTime) return;
+
+    const capacity = Number(submittedSlot.capacity);
+    const currentSlot = slots.find((slot) => slot.id === editingSlotId);
+    if (!currentSlot || capacity < Number(currentSlot.booked_count) || capacity < 1) {
+      setStatusMessage(`Capacity cannot be lower than the ${currentSlot?.booked_count || 0} existing bookings.`);
+      return;
+    }
+
+    const changes = {
+      label: formatSlotLabel(submittedSlot.date, submittedSlot.startTime, submittedSlot.endTime),
+      starts_at: new Date(`${submittedSlot.date}T${submittedSlot.startTime}`).toISOString(),
+      capacity,
+    };
+
+    setIsLoading(true);
+    if (hasSupabaseConfig) {
+      const result = await supabase
+        .from('pickup_slots')
+        .update(changes)
+        .eq('id', editingSlotId)
+        .select()
+        .single();
+
+      if (result.error) {
+        setStatusMessage('The pickup slot could not be updated. Check Supabase table permissions.');
+        setIsLoading(false);
+        return;
+      }
+
+      setSlots((entries) => entries.map((entry) => (entry.id === editingSlotId ? result.data : entry)));
+    } else {
+      setSlots((entries) => entries.map((entry) => (entry.id === editingSlotId ? { ...entry, ...changes } : entry)));
+    }
+
+    setStatusMessage('Pickup slot updated.');
+    cancelEditingSlot();
+    setIsLoading(false);
+  }
+
   async function signOutAdmin() {
     if (hasSupabaseConfig) {
       await supabase.auth.signOut();
@@ -527,25 +616,31 @@ function TailorSt() {
           adminUnlocked={adminUnlocked}
           bookings={bookings}
           cancelEditingItem={cancelEditingItem}
+          cancelEditingSlot={cancelEditingSlot}
           completeBooking={completeBooking}
           deleteItem={deleteItem}
           editingItem={editingItem}
           editingItemId={editingItemId}
           editingPhotoFile={editingPhotoFile}
+          editingSlot={editingSlot}
+          editingSlotId={editingSlotId}
           isLoading={isLoading}
           newItem={newItem}
           newSlot={newSlot}
           photoFile={photoFile}
           saveEditedItem={saveEditedItem}
+          saveEditedSlot={saveEditedSlot}
           setAdminPasscode={setAdminPasscode}
           setEditingItem={setEditingItem}
           setEditingPhotoFile={setEditingPhotoFile}
+          setEditingSlot={setEditingSlot}
           setNewItem={setNewItem}
           setNewSlot={setNewSlot}
           setPhotoFile={setPhotoFile}
           signOutAdmin={signOutAdmin}
           slots={slots}
           startEditingItem={startEditingItem}
+          startEditingSlot={startEditingSlot}
           uniforms={uniforms}
           unlockAdmin={unlockAdmin}
         />
@@ -678,25 +773,31 @@ function AdminView({
   adminUnlocked,
   bookings,
   cancelEditingItem,
+  cancelEditingSlot,
   completeBooking,
   deleteItem,
   editingItem,
   editingItemId,
   editingPhotoFile,
+  editingSlot,
+  editingSlotId,
   isLoading,
   newItem,
   newSlot,
   photoFile,
   saveEditedItem,
+  saveEditedSlot,
   setAdminPasscode,
   setEditingItem,
   setEditingPhotoFile,
+  setEditingSlot,
   setNewItem,
   setNewSlot,
   setPhotoFile,
   signOutAdmin,
   slots,
   startEditingItem,
+  startEditingSlot,
   uniforms,
   unlockAdmin,
 }) {
@@ -831,34 +932,96 @@ function AdminView({
         <button disabled={isLoading} type="submit">Post item</button>
       </form>
 
-      <form className="admin-panel" onSubmit={addSlot}>
+      <div className="admin-panel">
         <p className="eyebrow">Pickup</p>
         <h2>Add time slot</h2>
-        <div className="slot-time-grid">
+        <form className="add-slot-form" onSubmit={addSlot}>
+          <div className="slot-time-grid">
+            <label>
+              Date
+              <input required type="date" value={newSlot.date} onChange={(event) => setNewSlot({ ...newSlot, date: event.target.value })} />
+            </label>
+            <label>
+              Start
+              <input required type="time" value={newSlot.startTime} onChange={(event) => setNewSlot({ ...newSlot, startTime: event.target.value })} />
+            </label>
+            <label>
+              End
+              <input required type="time" value={newSlot.endTime} onChange={(event) => setNewSlot({ ...newSlot, endTime: event.target.value })} />
+            </label>
+          </div>
           <label>
-            Date
-            <input required type="date" value={newSlot.date} onChange={(event) => setNewSlot({ ...newSlot, date: event.target.value })} />
+            Capacity
+            <input min="1" type="number" value={newSlot.capacity} onChange={(event) => setNewSlot({ ...newSlot, capacity: event.target.value })} />
           </label>
-          <label>
-            Start
-            <input required type="time" value={newSlot.startTime} onChange={(event) => setNewSlot({ ...newSlot, startTime: event.target.value })} />
-          </label>
-          <label>
-            End
-            <input required type="time" value={newSlot.endTime} onChange={(event) => setNewSlot({ ...newSlot, endTime: event.target.value })} />
-          </label>
-        </div>
-        <label>
-          Capacity
-          <input min="1" type="number" value={newSlot.capacity} onChange={(event) => setNewSlot({ ...newSlot, capacity: event.target.value })} />
-        </label>
-        <button disabled={isLoading} type="submit">Add slot</button>
+          <button disabled={isLoading} type="submit">Add slot</button>
+        </form>
         <div className="slot-list">
           {slots.map((slot) => (
-            <span key={slot.id}>{slot.label} · {slot.booked_count}/{slot.capacity}</span>
+            <div className="slot-edit-row" key={slot.id}>
+              {editingSlotId === slot.id ? (
+                <form className="slot-edit-form" onSubmit={saveEditedSlot}>
+                  <div className="slot-time-grid">
+                    <label>
+                      Date
+                      <input
+                        required
+                        name="slotDate"
+                        type="date"
+                        value={editingSlot.date}
+                        onChange={(event) => setEditingSlot({ ...editingSlot, date: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Start
+                      <input
+                        required
+                        name="slotStartTime"
+                        type="time"
+                        value={editingSlot.startTime}
+                        onChange={(event) => setEditingSlot({ ...editingSlot, startTime: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      End
+                      <input
+                        required
+                        name="slotEndTime"
+                        type="time"
+                        value={editingSlot.endTime}
+                        onChange={(event) => setEditingSlot({ ...editingSlot, endTime: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    Capacity
+                    <input
+                      min={Math.max(1, Number(slot.booked_count))}
+                      name="slotCapacity"
+                      type="number"
+                      value={editingSlot.capacity}
+                      onChange={(event) => setEditingSlot({ ...editingSlot, capacity: event.target.value })}
+                    />
+                  </label>
+                  <small>{slot.booked_count} existing booking{Number(slot.booked_count) === 1 ? '' : 's'}</small>
+                  <div className="edit-actions">
+                    <button disabled={isLoading} type="submit">Save slot</button>
+                    <button className="secondary-button" onClick={cancelEditingSlot} type="button">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div>
+                    <strong>{slot.label}</strong>
+                    <span>{slot.booked_count}/{slot.capacity} booked</span>
+                  </div>
+                  <button className="secondary-button" onClick={() => startEditingSlot(slot)} type="button">Edit</button>
+                </>
+              )}
+            </div>
           ))}
         </div>
-      </form>
+      </div>
 
       <div className="admin-panel wide">
         <p className="eyebrow">Overview</p>
