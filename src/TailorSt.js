@@ -157,41 +157,65 @@ function TailorSt() {
   }, [cartIds]);
 
   useEffect(() => {
+    if (!cartOpen && !confirmation) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [cartOpen, confirmation]);
+
+  useEffect(() => {
+    if (view === 'shop') setVisibleUniformCount(uniformsPageSize);
+  }, [view]);
+
+  useEffect(() => {
     if (!hasSupabaseConfig) return;
 
-    async function loadLiveData() {
+    function applyUniformData(data) {
+      setUniforms(data);
+      const availableIds = new Set(data.filter((item) => item.status === 'available').map((item) => item.id));
+      setCartIds((ids) => ids.filter((id) => availableIds.has(id)));
+      setVisibleUniformCount(uniformsPageSize);
+    }
+
+    async function initializeData() {
       setIsLoading(true);
-      const [uniformResult, slotResult] = await Promise.all([
-        supabase.from('uniforms').select('*').eq('status', 'available').order('created_at', { ascending: false }),
-        supabase.from('pickup_slots').select('*').eq('is_active', true).order('starts_at', { ascending: true }),
+      const sessionResult = await supabase.auth.getSession();
+      const hasAdminSession = Boolean(sessionResult.data.session);
+      setAdminUnlocked(hasAdminSession);
+
+      const uniformQuery = supabase.from('uniforms').select('*').order('created_at', { ascending: false });
+      const slotQuery = supabase.from('pickup_slots').select('*').order('starts_at', { ascending: true });
+      const [uniformResult, slotResult, bookingResult] = await Promise.all([
+        hasAdminSession ? uniformQuery : uniformQuery.eq('status', 'available'),
+        hasAdminSession ? slotQuery : slotQuery.eq('is_active', true),
+        hasAdminSession
+          ? supabase.from('bookings').select('*, uniforms(title, size), pickup_slots(label)').order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
-      if (!uniformResult.error && uniformResult.data) setUniforms(uniformResult.data);
+      if (!uniformResult.error && uniformResult.data) applyUniformData(uniformResult.data);
       if (!slotResult.error && slotResult.data) setSlots(slotResult.data);
-      if (uniformResult.error || slotResult.error) {
-        setStatusMessage('Supabase is connected, but one or more tables need setup.');
+      if (!bookingResult.error && bookingResult.data) setBookings(bookingResult.data);
+      if (uniformResult.error || slotResult.error || bookingResult.error || sessionResult.error) {
+        console.error('Tailor St startup data could not be refreshed.', {
+          auth: sessionResult.error,
+          uniforms: uniformResult.error,
+          slots: slotResult.error,
+          bookings: bookingResult.error,
+        });
+        setStatusMessage('We could not refresh the latest inventory. Please reload and try again.');
+      } else {
+        setStatusMessage((message) => (
+          message === 'We could not refresh the latest inventory. Please reload and try again.' ? '' : message
+        ));
       }
       setIsLoading(false);
     }
 
-    async function restoreAdminSession() {
-      const sessionResult = await supabase.auth.getSession();
-      if (!sessionResult.data.session) return;
-
-      setAdminUnlocked(true);
-      const [uniformResult, slotResult, bookingResult] = await Promise.all([
-        supabase.from('uniforms').select('*').order('created_at', { ascending: false }),
-        supabase.from('pickup_slots').select('*').order('starts_at', { ascending: true }),
-        supabase.from('bookings').select('*, uniforms(title, size), pickup_slots(label)').order('created_at', { ascending: false }),
-      ]);
-
-      if (!uniformResult.error && uniformResult.data) setUniforms(uniformResult.data);
-      if (!slotResult.error && slotResult.data) setSlots(slotResult.data);
-      if (!bookingResult.error && bookingResult.data) setBookings(bookingResult.data);
-    }
-
-    loadLiveData();
-    restoreAdminSession();
+    initializeData();
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setAdminUnlocked(Boolean(session));
@@ -663,7 +687,10 @@ function TailorSt() {
             <div className="load-more-section">
               <button
                 className="load-more-button"
-                onClick={() => setVisibleUniformCount((count) => count + uniformsPageSize)}
+                onClick={() => setVisibleUniformCount((count) => Math.min(
+                  count + uniformsPageSize,
+                  availableUniforms.length
+                ))}
                 type="button"
               >
                 Load more
@@ -791,7 +818,12 @@ function TailorSt() {
               </label>
               <label>
                 Pickup time
-                <select value={selectedSlot} onChange={(event) => setSelectedSlot(event.target.value)} required>
+                <select
+                  disabled={activeSlots.length === 0}
+                  value={selectedSlot}
+                  onChange={(event) => setSelectedSlot(event.target.value)}
+                  required
+                >
                   <option value="">
                     {activeSlots.length === 0 ? 'No available pickup dates' : 'Choose a time'}
                   </option>
