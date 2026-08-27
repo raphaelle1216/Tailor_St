@@ -53,6 +53,7 @@ const emptyItem = {
 
 const adminEmail = process.env.REACT_APP_ADMIN_EMAIL || 'courchia.raphaelle@gmail.com';
 const localAdminPasscode = process.env.REACT_APP_ADMIN_PASSCODE || '';
+const uniformsPageSize = 9;
 
 function formatSlotLabel(dateValue, startValue, endValue) {
   const date = new Date(`${dateValue}T${startValue}`);
@@ -97,12 +98,22 @@ function makePickupCode() {
   return `TS-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
+function loadCartIds() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('tailor-st-cart') || '[]');
+    return Array.isArray(saved) ? saved.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 function TailorSt() {
   const [view, setView] = useState('shop');
   const [uniforms, setUniforms] = useState(() => (hasSupabaseConfig ? [] : demoUniforms));
   const [slots, setSlots] = useState(() => (hasSupabaseConfig ? [] : demoSlots));
   const [bookings, setBookings] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [cartIds, setCartIds] = useState(loadCartIds);
+  const [cartOpen, setCartOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [reservationEmail, setReservationEmail] = useState('');
   const [studentNote, setStudentNote] = useState('');
@@ -119,16 +130,31 @@ function TailorSt() {
   const [editingSlot, setEditingSlot] = useState({ date: '', startTime: '', endTime: '', capacity: 1 });
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(hasSupabaseConfig);
+  const [visibleUniformCount, setVisibleUniformCount] = useState(uniformsPageSize);
 
   const availableUniforms = useMemo(
     () => uniforms.filter((item) => item.status === 'available'),
     [uniforms]
   );
 
+  const visibleUniforms = useMemo(
+    () => availableUniforms.slice(0, visibleUniformCount),
+    [availableUniforms, visibleUniformCount]
+  );
+
   const activeSlots = useMemo(
     () => slots.filter((slot) => slot.is_active && Number(slot.booked_count) < Number(slot.capacity)),
     [slots]
   );
+
+  const cartItems = useMemo(
+    () => cartIds.map((id) => uniforms.find((item) => item.id === id)).filter(Boolean),
+    [cartIds, uniforms]
+  );
+
+  useEffect(() => {
+    window.localStorage.setItem('tailor-st-cart', JSON.stringify(cartIds));
+  }, [cartIds]);
 
   useEffect(() => {
     if (!hasSupabaseConfig) return;
@@ -177,38 +203,46 @@ function TailorSt() {
   async function reserveItem(event) {
     event.preventDefault();
     const email = reservationEmail.trim().toLowerCase();
-    if (!selectedItem || !selectedSlot || !email) return;
+    const feedback = studentNote.trim();
+    if (cartItems.length === 0 || !selectedSlot || !email || feedback.length < 10) return;
 
     const slot = slots.find((entry) => entry.id === selectedSlot);
     const pickupCode = makePickupCode();
-    const booking = {
-      uniform_id: selectedItem.id,
-      slot_id: selectedSlot,
-      pickup_code: pickupCode,
-      student_email: email,
-      student_note: studentNote.trim(),
-      status: 'reserved',
-    };
+    let savedPickupCode = pickupCode;
+    let reservationGroupId = `reservation-${Date.now()}`;
 
     setIsLoading(true);
 
     if (hasSupabaseConfig) {
-      const bookingResult = await supabase.rpc('reserve_uniform', {
-        requested_uniform_id: selectedItem.id,
+      const bookingResult = await supabase.rpc('reserve_uniforms', {
+        requested_uniform_ids: cartItems.map((item) => item.id),
         requested_slot_id: selectedSlot,
-        requested_pickup_code: pickupCode,
         requested_student_email: email,
-        requested_student_note: studentNote.trim(),
+        requested_student_note: feedback,
+        requested_testimonial_consent: true,
       });
       if (bookingResult.error) {
-        setStatusMessage('This item could not be reserved. Please check your email and pickup time.');
+        const [uniformResult, slotResult] = await Promise.all([
+          supabase.from('uniforms').select('*').eq('status', 'available').order('created_at', { ascending: false }),
+          supabase.from('pickup_slots').select('*').eq('is_active', true).order('starts_at', { ascending: true }),
+        ]);
+        if (!uniformResult.error && uniformResult.data) {
+          setUniforms(uniformResult.data);
+          const availableIds = new Set(uniformResult.data.map((item) => item.id));
+          setCartIds((ids) => ids.filter((id) => availableIds.has(id)));
+        }
+        if (!slotResult.error && slotResult.data) setSlots(slotResult.data);
+        setStatusMessage('Your reservation could not be completed. An item or pickup time may no longer be available, so your cart was refreshed.');
         setIsLoading(false);
         return;
       }
+      savedPickupCode = bookingResult.data?.[0]?.pickup_code || pickupCode;
+      reservationGroupId = bookingResult.data?.[0]?.reservation_group_id || reservationGroupId;
     }
 
+    const reservedIds = new Set(cartItems.map((item) => item.id));
     setUniforms((items) =>
-      items.map((item) => (item.id === selectedItem.id ? { ...item, status: 'reserved' } : item))
+      items.map((item) => (reservedIds.has(item.id) ? { ...item, status: 'reserved' } : item))
     );
     setSlots((entries) =>
       entries.map((entry) =>
@@ -216,16 +250,24 @@ function TailorSt() {
       )
     );
     setBookings((entries) => [
-      {
-        ...booking,
-        id: `${selectedItem.id}-${Date.now()}`,
-        uniforms: { title: selectedItem.title, size: selectedItem.size },
+      ...cartItems.map((item, index) => ({
+        id: `${item.id}-${Date.now()}-${index}`,
+        reservation_group_id: reservationGroupId,
+        uniform_id: item.id,
+        slot_id: selectedSlot,
+        pickup_code: savedPickupCode,
+        student_email: email,
+        student_note: feedback,
+        testimonial_consent: true,
+        status: 'reserved',
+        uniforms: { title: item.title, size: item.size },
         pickup_slots: { label: slot.label },
-      },
+      })),
       ...entries,
     ]);
-    setConfirmation({ item: selectedItem.title, slot: slot.label, pickupCode });
-    setSelectedItem(null);
+    setConfirmation({ items: cartItems.map((item) => item.title), slot: slot.label, pickupCode: savedPickupCode });
+    setCartIds([]);
+    setCartOpen(false);
     setSelectedSlot('');
     setReservationEmail('');
     setStudentNote('');
@@ -520,17 +562,17 @@ function TailorSt() {
     setStatusMessage('');
   }
 
-  async function completeBooking(booking) {
+  async function completeBooking(order) {
     setIsLoading(true);
     if (hasSupabaseConfig) {
-      await supabase.from('bookings').update({ status: 'completed' }).eq('id', booking.id);
-      await supabase.from('uniforms').update({ status: 'completed' }).eq('id', booking.uniform_id);
+      await supabase.from('bookings').update({ status: 'completed' }).in('id', order.bookingIds);
+      await supabase.from('uniforms').update({ status: 'completed' }).in('id', order.uniformIds);
     }
     setBookings((entries) =>
-      entries.map((entry) => (entry.id === booking.id ? { ...entry, status: 'completed' } : entry))
+      entries.map((entry) => (order.bookingIds.includes(entry.id) ? { ...entry, status: 'completed' } : entry))
     );
     setUniforms((items) =>
-      items.map((item) => (item.id === booking.uniform_id ? { ...item, status: 'completed' } : item))
+      items.map((item) => (order.uniformIds.includes(item.id) ? { ...item, status: 'completed' } : item))
     );
     setIsLoading(false);
   }
@@ -553,6 +595,14 @@ function TailorSt() {
           </button>
           <button className={view === 'donate' ? 'active' : ''} onClick={() => setView('donate')} type="button">
             Donate
+          </button>
+          <button
+            aria-label={`Cart with ${cartItems.length} ${cartItems.length === 1 ? 'item' : 'items'}`}
+            className="cart-nav-button"
+            onClick={() => setCartOpen(true)}
+            type="button"
+          >
+            Cart <span className="cart-count">{cartItems.length}</span>
           </button>
         </nav>
       </header>
@@ -582,7 +632,7 @@ function TailorSt() {
             </section>
           ) : (
             <section className="inventory-grid" aria-label="Available uniforms">
-              {availableUniforms.map((item) => (
+              {visibleUniforms.map((item) => (
                 <article className="uniform-card" key={item.id}>
                   <img src={item.image_url || '/uniform-placeholder.svg'} alt="" />
                   <div className="uniform-card-body">
@@ -592,11 +642,36 @@ function TailorSt() {
                     </div>
                     <p>{item.category} · {item.condition}</p>
                     <p className="muted">{item.notes}</p>
-                    <button onClick={() => setSelectedItem(item)} type="button">Reserve</button>
+                    <button
+                      className={cartIds.includes(item.id) ? 'added-to-cart' : ''}
+                      disabled={cartIds.includes(item.id)}
+                      onClick={() => {
+                        setCartIds((ids) => (ids.includes(item.id) ? ids : [...ids, item.id]));
+                        setStatusMessage(`${item.title} was added to your cart.`);
+                      }}
+                      type="button"
+                    >
+                      {cartIds.includes(item.id) ? 'Added to cart' : 'Add to cart'}
+                    </button>
                   </div>
                 </article>
               ))}
             </section>
+          )}
+
+          {!isLoading && visibleUniformCount < availableUniforms.length && (
+            <div className="load-more-section">
+              <button
+                className="load-more-button"
+                onClick={() => setVisibleUniformCount((count) => count + uniformsPageSize)}
+                type="button"
+              >
+                Load more
+              </button>
+              <p aria-live="polite">
+                Showing {visibleUniforms.length} of {availableUniforms.length} pieces
+              </p>
+            </div>
           )}
 
           {!isLoading && availableUniforms.length === 0 && (
@@ -665,22 +740,43 @@ function TailorSt() {
               {confirmation.pickupCode}
             </div>
             <p>
-              {confirmation.item} is reserved for {confirmation.slot}.
+              {confirmation.items.length === 1 ? 'Your item is' : `${confirmation.items.length} items are`} reserved for {confirmation.slot}.
             </p>
+            <ul className="confirmation-items" aria-label="Reserved items">
+              {confirmation.items.map((item) => <li key={item}>{item}</li>)}
+            </ul>
             <button onClick={() => setConfirmation(null)} type="button">Done</button>
           </section>
         </div>
       )}
 
-      {selectedItem && (
+      {cartOpen && (
         <div className="modal-backdrop" role="presentation">
-          <section className="reservation-modal" role="dialog" aria-modal="true" aria-label="Reserve uniform">
-            <button className="close-button" onClick={() => setSelectedItem(null)} type="button">x</button>
-            <img src={selectedItem.image_url} alt="" />
-            <form onSubmit={reserveItem}>
-              <p className="eyebrow">Reserve for pickup</p>
-              <h2>{selectedItem.title}</h2>
-              <p className="muted">{selectedItem.size} · {selectedItem.condition}</p>
+          <section className="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+            <button aria-label="Close cart" className="close-button" onClick={() => setCartOpen(false)} type="button">×</button>
+            <div className="cart-heading"><h2 id="cart-title">Cart</h2></div>
+            {cartItems.length === 0 ? (
+              <div className="cart-empty-state">
+                <h3>Your cart is empty.</h3>
+                <p className="muted">Add the uniforms you need, then come back here to reserve them.</p>
+                <button onClick={() => setCartOpen(false)} type="button">Keep browsing</button>
+              </div>
+            ) : <>
+              <div className="cart-list" aria-label="Items in cart">
+                {cartItems.map((item) => (
+                  <article className="cart-row" key={item.id}>
+                    <img src={item.image_url || '/uniform-placeholder.svg'} alt="" />
+                    <div><strong>{item.title}</strong><span>{item.size} · {item.condition}</span></div>
+                    <button onClick={() => setCartIds((ids) => ids.filter((id) => id !== item.id))} type="button">Remove</button>
+                  </article>
+                ))}
+              </div>
+              <form className="cart-checkout-form" onSubmit={reserveItem}>
+              <div className="checkout-intro">
+                <p className="eyebrow">No payment needed</p>
+                <h3>Complete your reservation</h3>
+                <p>Instead of paying, leave short feedback about how Tailor St helps you!</p>
+              </div>
               <label>
                 Email address
                 <input
@@ -696,7 +792,9 @@ function TailorSt() {
               <label>
                 Pickup time
                 <select value={selectedSlot} onChange={(event) => setSelectedSlot(event.target.value)} required>
-                  <option value="">Choose a time</option>
+                  <option value="">
+                    {activeSlots.length === 0 ? 'No available pickup dates' : 'Choose a time'}
+                  </option>
                   {activeSlots.map((slot) => (
                     <option key={slot.id} value={slot.id}>
                       {slot.label} ({Number(slot.capacity) - Number(slot.booked_count)} open)
@@ -705,17 +803,22 @@ function TailorSt() {
                 </select>
               </label>
               <label>
-                Optional note
+                Your feedback
+                <span className="field-helper">At least 10 characters. Feedback may be shared anonymously as a Tailor St testimonial.</span>
                 <textarea
+                  maxLength="500"
+                  minLength="10"
+                  required
                   value={studentNote}
                   onChange={(event) => setStudentNote(event.target.value)}
-                  placeholder="Example: I can pick this up after dismissal."
                 />
+                <span className="character-count">{studentNote.length}/500</span>
               </label>
               <button disabled={isLoading || activeSlots.length === 0} type="submit">
-                {isLoading ? 'Saving...' : 'Book pickup'}
+                {isLoading ? 'Reserving...' : `Reserve ${cartItems.length} ${cartItems.length === 1 ? 'item' : 'items'}`}
               </button>
             </form>
+            </>}
           </section>
         </div>
       )}
@@ -801,8 +904,34 @@ function AdminView({
   uniforms,
   unlockAdmin,
 }) {
-  const activeBookings = bookings.filter((booking) => booking.status === 'reserved');
-  const completedBookings = bookings.filter((booking) => booking.status === 'completed');
+  const orders = Array.from(bookings.reduce((grouped, booking) => {
+    const orderId = booking.reservation_group_id || booking.id;
+    const order = grouped.get(orderId) || {
+      id: orderId,
+      bookingIds: [],
+      uniformIds: [],
+      items: [],
+      pickupCode: booking.pickup_code,
+      pickupLabel: booking.pickup_slots?.label || 'Pickup slot',
+      studentEmail: booking.student_email,
+      studentNote: booking.student_note,
+      status: 'completed',
+    };
+
+    order.bookingIds.push(booking.id);
+    order.uniformIds.push(booking.uniform_id);
+    order.items.push({
+      id: booking.uniform_id,
+      title: booking.uniforms?.title || 'Uniform item',
+      size: booking.uniforms?.size || '',
+    });
+    if (booking.status === 'reserved') order.status = 'reserved';
+    grouped.set(orderId, order);
+    return grouped;
+  }, new Map()).values());
+
+  const activeBookings = orders.filter((order) => order.status === 'reserved');
+  const completedBookings = orders.filter((order) => order.status === 'completed');
 
   if (!adminUnlocked) {
     return (
@@ -840,17 +969,21 @@ function AdminView({
         </div>
         <div className="table-list">
           <p className="eyebrow">Open reservations</p>
-          {activeBookings.map((booking) => (
-            <article className="order-row" key={booking.id}>
+          {activeBookings.map((order) => (
+            <article className="order-row" key={order.id}>
               <div>
-                <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
-                <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
-                <small>Email {booking.student_email || 'Not collected'}</small>
-                <small>Pickup code {booking.pickup_code}</small>
-                {booking.student_note && <small>Note: {booking.student_note}</small>}
+                <strong>{order.items.length} {order.items.length === 1 ? 'item' : 'items'} · {order.pickupLabel}</strong>
+                <ul className="reservation-item-list">
+                  {order.items.map((item) => (
+                    <li key={`${order.id}-${item.id}`}>{item.title}{item.size ? ` · ${item.size}` : ''}</li>
+                  ))}
+                </ul>
+                <small>Email {order.studentEmail || 'Not collected'}</small>
+                <small>Pickup code {order.pickupCode}</small>
+                {order.studentNote && <small>Note: {order.studentNote}</small>}
               </div>
-              <button disabled={isLoading} onClick={() => completeBooking(booking)} type="button">
-                Check off
+              <button disabled={isLoading} onClick={() => completeBooking(order)} type="button">
+                Check off all
               </button>
             </article>
           ))}
@@ -859,14 +992,18 @@ function AdminView({
           {completedBookings.length > 0 && (
             <>
               <p className="eyebrow">Completed orders</p>
-              {completedBookings.map((booking) => (
-                <article className="order-row completed-order" key={booking.id}>
+              {completedBookings.map((order) => (
+                <article className="order-row completed-order" key={order.id}>
                   <div>
-                    <strong>{booking.uniforms?.title || 'Uniform item'}</strong>
-                    <span>{booking.uniforms?.size || ''} · {booking.pickup_slots?.label || 'Pickup slot'}</span>
-                    <small>Email {booking.student_email || 'Not collected'}</small>
-                    <small>Pickup code {booking.pickup_code}</small>
-                    {booking.student_note && <small>Note: {booking.student_note}</small>}
+                    <strong>{order.items.length} {order.items.length === 1 ? 'item' : 'items'} · {order.pickupLabel}</strong>
+                    <ul className="reservation-item-list">
+                      {order.items.map((item) => (
+                        <li key={`${order.id}-${item.id}`}>{item.title}{item.size ? ` · ${item.size}` : ''}</li>
+                      ))}
+                    </ul>
+                    <small>Email {order.studentEmail || 'Not collected'}</small>
+                    <small>Pickup code {order.pickupCode}</small>
+                    {order.studentNote && <small>Note: {order.studentNote}</small>}
                   </div>
                   <span className="status-pill">Complete</span>
                 </article>
